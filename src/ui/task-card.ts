@@ -68,6 +68,9 @@ export function renderTaskCard(
   });
 
   card.append(textElement('h4', 'tmc-task-title', task.title));
+  if (task.details) {
+    card.append(textElement('p', 'tmc-task-description', task.details));
+  }
   const badges = document.createElement('div');
   badges.className = 'tmc-task-badges';
   badges.append(textElement('span', `tmc-status tmc-status-${task.status}`, STATUS_LABELS[task.status]));
