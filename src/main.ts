@@ -137,7 +137,7 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
     const importWizard = new LegacyImportWizard(
       this.app,
       migrationService,
-      this.settings.backupRoot,
+      () => this.settings.backupRoot,
     );
     this.registerView(
       TASK_WORKSPACE_VIEW_TYPE,

@@ -86,6 +86,10 @@ describe('TaskScanner', () => {
 describe('validateSettings', () => {
   it('accepts defaults and rejects unsafe vault paths and values', () => {
     expect(validateSettings(DEFAULT_SETTINGS)).toEqual([]);
+    expect(validateSettings({
+      ...DEFAULT_SETTINGS,
+      scanRoots: ['../外部任务'],
+    }).map((issue) => issue.field)).toContain('scanRoots');
     expect(
       validateSettings({
         ...DEFAULT_SETTINGS,

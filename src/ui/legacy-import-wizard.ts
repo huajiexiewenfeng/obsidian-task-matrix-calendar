@@ -15,6 +15,7 @@ export type LegacyImportWizardServicePort = Pick<
 >;
 
 type WizardStep = 'select' | 'review' | 'confirm';
+type BackupRootSource = string | (() => string);
 
 interface CandidateError {
   field: string;
@@ -57,7 +58,7 @@ export class LegacyImportWizard extends Modal {
   constructor(
     app: App,
     private readonly service: LegacyImportWizardServicePort,
-    private readonly backupRoot: string,
+    private readonly backupRoot: BackupRootSource,
   ) {
     super(app);
   }
@@ -280,13 +281,16 @@ export class LegacyImportWizard extends Modal {
       byPath.set(candidate.sourcePath, (byPath.get(candidate.sourcePath) ?? 0) + 1);
     }
     const timestamp = backupTimestamp(this.plan?.createdAt ?? '');
+    const backupRoot = typeof this.backupRoot === 'function'
+      ? this.backupRoot()
+      : this.backupRoot;
     for (const [path, candidateCount] of byPath) {
       const file = document.createElement('div');
       file.dataset.filePath = path;
       const source = document.createElement('strong');
       source.textContent = `${path} · ${candidateCount} 个`;
       const backup = document.createElement('div');
-      backup.textContent = `备份副本：${this.backupRoot}/${timestamp}/${path}`;
+      backup.textContent = `备份副本：${backupRoot}/${timestamp}/${path}`;
       file.append(source, backup);
       summary.append(file);
     }

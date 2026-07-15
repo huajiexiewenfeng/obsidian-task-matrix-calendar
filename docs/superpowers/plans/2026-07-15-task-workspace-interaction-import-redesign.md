@@ -975,10 +975,10 @@ With explicit approval for the main Vault write, run:
 
 ```powershell
 $env:ALLOW_PRODUCTION_VAULT='YES'
-node scripts/install-to-vault.mjs --vault "C:\Users\admin\Documents\Obsidian Vault"
+node scripts/install-to-vault.mjs --vault "C:\path\to\Main Vault"
 ```
 
-Expected: `Installed task-matrix-calendar to C:\Users\admin\Documents\Obsidian Vault\.obsidian\plugins\task-matrix-calendar` and a timestamped backup of the previous plugin directory.
+Expected: `Installed task-matrix-calendar to C:\path\to\Main Vault\.obsidian\plugins\task-matrix-calendar` and a timestamped backup of the previous plugin directory.
 
 Compare SHA-256 for repository and installed `main.js`, `manifest.json`, and `styles.css`; all three pairs must match.
 

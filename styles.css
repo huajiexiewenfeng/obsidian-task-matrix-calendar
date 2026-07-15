@@ -97,11 +97,6 @@
   background: var(--interactive-accent);
 }
 
-.tmc-mode-switch {
-  display: inline-flex;
-  gap: 4px;
-}
-
 .tmc-workspace-modes {
   display: inline-flex;
   gap: 4px;
@@ -111,7 +106,6 @@
   border-radius: var(--radius-m);
 }
 
-.tmc-mode-switch [aria-selected="true"],
 .tmc-workspace-modes [aria-pressed="true"] {
   color: var(--text-on-accent);
   background: var(--interactive-accent);
@@ -256,8 +250,7 @@
 }
 
 .tmc-task-details,
-.tmc-empty,
-.tmc-source-path {
+.tmc-empty {
   color: var(--text-muted);
 }
 
@@ -267,7 +260,6 @@
   font-weight: var(--font-semibold);
 }
 
-.tmc-task-form,
 .tmc-task-form-modal form {
   display: grid;
   gap: 10px;
@@ -321,13 +313,11 @@
   background: var(--interactive-accent);
 }
 
-.tmc-task-form label,
 .tmc-task-form-modal form label {
   display: grid;
   gap: 4px;
 }
 
-.tmc-task-form textarea,
 .tmc-task-form-modal textarea {
   min-height: 8rem;
   resize: vertical;
@@ -338,7 +328,6 @@
   gap: 8px;
 }
 
-.tmc-calendar-layout,
 .tmc-calendar-view {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(240px, 28%);
@@ -400,9 +389,7 @@
   font-size: var(--font-ui-smaller);
 }
 
-.tmc-calendar-sidebar,
 .tmc-calendar-view [data-role="selected-day"],
-.tmc-unscheduled-tasks,
 .tmc-calendar-view [data-role="unscheduled"] {
   padding: 12px;
   background: var(--background-secondary);
@@ -547,13 +534,11 @@
 }
 
 .tmc-import-warning,
-.tmc-migration-errors,
 [data-migration-failures],
 [data-migration-error],
 [data-candidate-error],
 .tmc-import-wizard [data-import-error],
 .tmc-import-wizard [data-candidate-error],
-.tmc-form-error,
 .tmc-task-form-modal [data-form-error] {
   color: var(--text-error);
 }
@@ -591,7 +576,6 @@
 
 @media (max-width: 900px) {
   .tmc-quadrant-grid,
-  .tmc-calendar-layout,
   .tmc-calendar-view {
     grid-template-columns: minmax(0, 1fr);
   }

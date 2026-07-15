@@ -1171,7 +1171,7 @@ After obtaining filesystem approval for the external Vault write, run:
 
 ```powershell
 $env:ALLOW_PRODUCTION_VAULT='YES'
-node scripts/install-to-vault.mjs --vault "C:\Users\admin\Documents\Obsidian Vault"
+node scripts/install-to-vault.mjs --vault "C:\path\to\Main Vault"
 ```
 
 Expected: the installer reports the target plugin path and creates a timestamped backup of any existing plugin directory before copying only `main.js`, `manifest.json`, and `styles.css`.
@@ -1182,7 +1182,7 @@ Compare SHA-256 for the three repository artifacts and installed artifacts:
 
 ```powershell
 $repo='D:\ai-discovery\obsidian-task-matrix-calendar'
-$installed='C:\Users\admin\Documents\Obsidian Vault\.obsidian\plugins\task-matrix-calendar'
+$installed='C:\path\to\Main Vault\.obsidian\plugins\task-matrix-calendar'
 foreach($name in 'main.js','manifest.json','styles.css') {
   $source=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $repo $name)).Hash
   $target=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $installed $name)).Hash

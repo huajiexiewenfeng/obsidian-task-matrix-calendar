@@ -138,6 +138,20 @@ describe('LegacyImportWizard', () => {
     expect(action(wizard, 'continue').disabled).toBe(false);
   });
 
+  it('shows an empty state when configured scan roots contain no eligible files', () => {
+    const wizard = new LegacyImportWizard(
+      {} as App,
+      service({ listEligibleFiles: vi.fn(() => []) }),
+      '备份/旧任务导入',
+    );
+
+    wizard.openWizard();
+
+    expect(wizard.contentEl.textContent).toContain('当前任务扫描目录内没有可选的 Markdown 文件。');
+    expect(wizard.contentEl.querySelector('[data-file-path]')).toBeNull();
+    expect(action(wizard, 'continue').disabled).toBe(true);
+  });
+
   it('previews exactly the checked files before opening review', async () => {
     const migrationService = service();
     const wizard = new LegacyImportWizard({} as App, migrationService, '备份/旧任务导入');
@@ -177,6 +191,26 @@ describe('LegacyImportWizard', () => {
     expect(row(wizard, 'list').textContent).toContain('普通列表，仅作为候选');
   });
 
+  it('shows source evidence for files that could not be previewed', async () => {
+    const failedPlan: MigrationPlan = {
+      ...plan,
+      failures: new Map([[sourcePath, '读取失败：文件已移动']]),
+      files: new Map([[sourcePath, []]]),
+    };
+    const wizard = new LegacyImportWizard(
+      {} as App,
+      service({ preview: vi.fn().mockResolvedValue(failedPlan) }),
+      '备份/旧任务导入',
+    );
+
+    await openReview(wizard);
+
+    const failures = wizard.contentEl.querySelector<HTMLElement>('[data-import-failures]');
+    expect(failures?.textContent).toContain('无法读取的文件');
+    expect(failures?.textContent).toContain(`${sourcePath}：读取失败：文件已移动`);
+    expect(wizard.contentEl.querySelector('[data-candidate-id]')).toBeNull();
+  });
+
   it('preserves all corrections and candidate selection after returning to unchanged files', async () => {
     const migrationService = service();
     const wizard = new LegacyImportWizard({} as App, migrationService, '备份/旧任务导入');
@@ -208,6 +242,30 @@ describe('LegacyImportWizard', () => {
     expect(field(wizard, 'checkbox', 'quadrant').value).toBe('important-urgent');
     expect(field(wizard, 'checkbox', 'project').value).toBe('迁移项目');
     expect(field(wizard, 'checkbox', 'tags').value).toBe('旧任务, 待复核');
+  });
+
+  it('applies cleared optional proposal fields as undefined values', async () => {
+    const migrationService = service();
+    const wizard = new LegacyImportWizard({} as App, migrationService, '备份/旧任务导入');
+    await openReview(wizard);
+
+    change(field(wizard, 'checkbox', 'details'), '');
+    change(field(wizard, 'checkbox', 'plannedDate'), '');
+    change(field(wizard, 'checkbox', 'dueDate'), '');
+    change(field(wizard, 'checkbox', 'project'), '');
+    change(field(wizard, 'checkbox', 'tags'), '');
+    action(wizard, 'continue').click();
+    action(wizard, 'confirm').click();
+    await flushPromises();
+
+    const selections = vi.mocked(migrationService.apply).mock.calls[0]?.[1];
+    expect(selections?.get('checkbox')).toMatchObject({
+      details: undefined,
+      plannedDate: undefined,
+      dueDate: undefined,
+      project: undefined,
+      tags: [],
+    });
   });
 
   it('ignores openWizard reentry while review is open and preserves the active session', async () => {
@@ -264,6 +322,24 @@ describe('LegacyImportWizard', () => {
     );
     expect(wizard.contentEl.textContent).toContain('先备份原文，再仅改写所选候选');
     expect(migrationService.apply).not.toHaveBeenCalled();
+  });
+
+  it('uses the current backup root when settings change before confirmation', async () => {
+    let backupRoot = '备份/初始目录';
+    const wizard = new LegacyImportWizard(
+      {} as App,
+      service(),
+      () => backupRoot,
+    );
+    await openReview(wizard);
+
+    backupRoot = '备份/更新目录';
+    action(wizard, 'continue').click();
+
+    expect(wizard.contentEl.textContent).toContain(
+      '备份/更新目录/2026-07-15T00-00-00-000Z/任务/旧.md',
+    );
+    expect(wizard.contentEl.textContent).not.toContain('备份/初始目录/');
   });
 
   it('calls apply only from final confirmation with normalized corrected selections', async () => {

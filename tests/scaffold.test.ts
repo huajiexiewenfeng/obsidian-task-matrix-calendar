@@ -17,11 +17,12 @@ describe('plugin scaffold', () => {
     const styles = readFileSync('styles.css', 'utf8');
 
     for (const selector of [
-      '.tmc-mode-switch',
-      '.tmc-task-form',
-      '.tmc-calendar-sidebar',
-      '.tmc-unscheduled-tasks',
-      '.tmc-migration-errors',
+      '.tmc-workspace-header',
+      '.tmc-filter-chip',
+      '.tmc-form-section',
+      '.tmc-import-progress',
+      '.tmc-import-evidence',
+      '.tmc-import-actions',
       ':focus-visible',
     ]) {
       expect(styles).toContain(selector);
@@ -45,6 +46,19 @@ describe('plugin scaffold', () => {
     expect(styles).toContain('var(--text-normal)');
     expect(styles).toContain('var(--background-primary)');
     expect(styles).not.toContain('.tmc-drawer-');
+    for (const obsoleteSelector of [
+      '.tmc-mode-switch',
+      '.tmc-calendar-layout',
+      '.tmc-calendar-sidebar',
+      '.tmc-unscheduled-tasks',
+      '.tmc-migration-errors',
+      '.tmc-source-path',
+      '.tmc-form-error',
+      '.tmc-migration-row',
+    ]) {
+      expect(styles).not.toContain(obsoleteSelector);
+    }
+    expect(styles).not.toMatch(/\.tmc-task-form(?=[\s,{>:+~])/);
 
     const foregroundAndBackgroundDeclarations = styles
       .split('\n')
@@ -60,10 +74,12 @@ describe('plugin scaffold', () => {
     const readme = readFileSync('README.md', 'utf8');
 
     for (const behavior of [
-      '“任务 / 日历”在同一个任务工作区内切换并共享筛选状态。',
-      '“+ 新任务”和“编辑”使用同一个弹窗；详情支持多行。',
+      '“任务矩阵 / 日历”在同一个任务工作区内切换并共享筛选状态。',
+      '搜索与项目、状态、截止风险、来源筛选可以一键清除。',
+      '“+ 新任务”和“编辑”使用同一个分组弹窗；详情支持多行。',
       '开始日期可输入 `YYYYMMDD` 或 `YYYY-MM-DD`，保存为 `计划日期:: YYYY-MM-DD`。',
-      '“导入旧任务”自动扫描设置中的任务目录；默认只勾选高置信度候选，确认前可修改识别结果。',
+      '旧任务导入先选择 Markdown 文件，再核对候选，最后确认备份与写入。',
+      '复选框候选默认选中；普通列表候选默认不选中。',
       '  - 详情::',
       '    > 第一行',
     ]) {
