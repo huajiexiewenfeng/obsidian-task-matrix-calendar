@@ -8,6 +8,7 @@ export class FakeVault {
   private readonly modifyHandlers = new Set<FileEventHandler>();
   private readonly renameHandlers = new Set<RenameEventHandler>();
   private readonly deleteHandlers = new Set<FileEventHandler>();
+  private readonly processFailures = new Map<string, Error[]>();
 
   constructor(files: Record<string, string> = {}) {
     for (const [path, source] of Object.entries(files)) this.files.set(path, source);
@@ -22,6 +23,30 @@ export class FakeVault {
     const source = this.files.get(path);
     if (source === undefined) throw new Error(`Missing fake file: ${path}`);
     return source;
+  }
+
+  exists(path: string): boolean {
+    return this.files.has(path);
+  }
+
+  async create(path: string, source: string): Promise<void> {
+    if (this.files.has(path)) throw new Error(`Fake file already exists: ${path}`);
+    this.files.set(path, source);
+  }
+
+  async process(path: string, update: (source: string) => string): Promise<void> {
+    const failures = this.processFailures.get(path);
+    const failure = failures?.shift();
+    if (failure) throw failure;
+    const source = this.files.get(path);
+    if (source === undefined) throw new Error(`Missing fake file: ${path}`);
+    this.files.set(path, update(source));
+  }
+
+  failNextProcess(path: string, error: Error): void {
+    const failures = this.processFailures.get(path) ?? [];
+    failures.push(error);
+    this.processFailures.set(path, failures);
   }
 
   set(path: string, source: string): void {

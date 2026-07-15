@@ -37,6 +37,10 @@ export class TaskIndex {
     return matches?.length === 1 ? matches[0] : undefined;
   }
 
+  file(path: string): ParseResult | undefined {
+    return this.files.get(path);
+  }
+
   childrenOf(parentId: string): IndexedTask[] {
     return this.tasks.filter((item) => item.task.parentId === parentId);
   }

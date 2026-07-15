@@ -25,6 +25,10 @@ function toEpochDay(value: string): number | null {
   return Math.floor(timestamp / MILLISECONDS_PER_DAY);
 }
 
+export function isValidIsoDate(value: string): boolean {
+  return toEpochDay(value) !== null;
+}
+
 export function classifyDateRisk(
   dueDate: string | undefined,
   status: TaskStatus,
