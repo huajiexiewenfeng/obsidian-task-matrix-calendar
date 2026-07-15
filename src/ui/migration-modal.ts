@@ -1,5 +1,6 @@
 import { Modal, Notice, type App } from 'obsidian';
 import { normalizeDateInput } from '../domain/dates';
+import { validateTaskDraft } from '../domain/rules';
 import type {
   LegacyPriority,
   TaskNode,
@@ -299,6 +300,7 @@ export class MigrationModal extends Modal {
     if (!this.plan || this.pending) return;
     this.clearErrors();
     if (!this.normalizeSelectedDates()) return;
+    if (!this.validateSelectedDrafts()) return;
 
     const selectedCorrections = new Map<string, TaskNode>();
     for (const id of this.selected) {
@@ -347,6 +349,23 @@ export class MigrationModal extends Modal {
     return valid;
   }
 
+  private validateSelectedDrafts(): boolean {
+    let valid = true;
+    for (const id of this.selected) {
+      const corrected = this.corrections.get(id);
+      if (!corrected) continue;
+      const error = validateTaskDraft(corrected);
+      if (!error) continue;
+      valid = false;
+      this.showCandidateError(
+        id,
+        error.code === 'classification-required' ? 'quadrant' : 'title',
+        error.message,
+      );
+    }
+    return valid;
+  }
+
   private updateDateControl(
     candidateId: string,
     name: 'plannedDate' | 'dueDate',
@@ -360,7 +379,7 @@ export class MigrationModal extends Modal {
 
   private showCandidateError(
     candidateId: string,
-    name: 'plannedDate' | 'dueDate',
+    name: 'title' | 'quadrant' | 'plannedDate' | 'dueDate',
     error: unknown,
   ): void {
     const row = this.contentEl.querySelector<HTMLElement>(`[data-candidate-id="${candidateId}"]`);

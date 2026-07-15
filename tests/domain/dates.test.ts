@@ -17,6 +17,16 @@ describe('normalizeDateInput', () => {
   it('rejects invalid calendar dates', () => {
     expect(() => normalizeDateInput('20260230')).toThrowError(/有效日期/);
   });
+
+  it.each([
+    '2026/07/15',
+    '2026-7-15',
+    '2026071',
+    '202607150',
+    '2026-07-15T00:00:00',
+  ])('rejects unsupported date shape %s', (value) => {
+    expect(() => normalizeDateInput(value)).toThrowError(/有效日期/);
+  });
 });
 
 describe('classifyDateRisk', () => {

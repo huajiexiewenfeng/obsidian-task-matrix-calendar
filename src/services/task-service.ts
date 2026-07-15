@@ -1,6 +1,11 @@
 import { isValidIsoDate } from '../domain/dates';
 import { createTaskId } from '../domain/id';
-import { validateParentCompletion, validateTransition, type TaskRuleErrorCode } from '../domain/rules';
+import {
+  validateParentCompletion,
+  validateTaskDraft,
+  validateTransition,
+  type TaskRuleErrorCode,
+} from '../domain/rules';
 import {
   makeTask,
   type IndexedTask,
@@ -15,8 +20,6 @@ import type { TaskMatrixCalendarSettings } from '../settings';
 export type TaskCommandErrorCode =
   | TaskRuleErrorCode
   | 'task-not-found'
-  | 'invalid-title'
-  | 'invalid-date'
   | 'child-move-not-supported'
   | 'parent-not-found';
 
@@ -80,9 +83,13 @@ export class TaskService {
 
   async create(input: CreateTaskInput): Promise<TaskNode> {
     const title = normalizeTitle(input.title);
-    if (!title) throw new TaskCommandError('invalid-title', '任务标题不能为空。');
-    validateDate(input.plannedDate);
-    validateDate(input.dueDate);
+    this.assertDraft({
+      title,
+      status: 'todo',
+      quadrant: input.quadrant ?? 'unclassified',
+      plannedDate: input.plannedDate,
+      dueDate: input.dueDate,
+    });
 
     if (input.parentId) {
       const parent = this.required(input.parentId);
@@ -143,19 +150,10 @@ export class TaskService {
       dueDate: patch.dueDate === undefined ? indexed.task.dueDate : patch.dueDate || undefined,
       childrenIds: indexed.task.childrenIds,
     };
-    if (!updated.title) throw new TaskCommandError('invalid-title', '任务标题不能为空。', id);
-    validateDate(updated.plannedDate);
-    validateDate(updated.dueDate);
+    this.assertDraft(updated, id);
 
     if (updated.status !== indexed.task.status) {
       this.assertTransition({ ...updated, status: indexed.task.status }, updated.status);
-    }
-    if (updated.status !== 'todo' && updated.quadrant === 'unclassified') {
-      throw new TaskCommandError(
-        'classification-required',
-        '任务进入进行中或完成前必须选择四象限分类。',
-        id,
-      );
     }
     if (updated.status !== indexed.task.status) {
       if (updated.status === 'done') this.assertParentGate(updated);
@@ -246,6 +244,14 @@ export class TaskService {
   private assertTransition(task: TaskNode, target: TaskStatus): void {
     const error = validateTransition(task, target);
     if (error) throw new TaskCommandError(error.code, error.message, task.id);
+  }
+
+  private assertDraft(
+    task: Pick<TaskNode, 'title' | 'status' | 'quadrant' | 'plannedDate' | 'dueDate'>,
+    taskId?: string,
+  ): void {
+    const error = validateTaskDraft(task);
+    if (error) throw new TaskCommandError(error.code, error.message, taskId);
   }
 
   private assertParentGate(task: TaskNode): void {

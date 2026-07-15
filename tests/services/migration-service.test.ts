@@ -150,13 +150,48 @@ describe('MigrationService', () => {
     expect(candidates.some((item) => item.originalText.includes('无关说明'))).toBe(false);
   });
 
+  it('validates every selected correction before creating any backup or writing any file', async () => {
+    const root = DEFAULT_SETTINGS.scanRoots[0];
+    const firstPath = `${root}/first-invalid-wave.md`;
+    const secondPath = `${root}/second-invalid-wave.md`;
+    const firstSource = '# 2026-07-15\n- [ ] First legacy P1';
+    const secondSource = '# 2026-07-15\n- [ ] Second legacy P2';
+    const vault = new FakeVault({
+      [firstPath]: firstSource,
+      [secondPath]: secondSource,
+    });
+    const { service } = setup(firstSource, DEFAULT_SETTINGS, vault);
+    const plan = await service.preview();
+    const first = plan.files.get(firstPath)![0];
+    const second = plan.files.get(secondPath)![0];
+    const selections = new Map([
+      [first.candidateId, first.proposed],
+      [second.candidateId, makeTask({ ...second.proposed, title: '   ' })],
+    ]);
+
+    await expect(service.apply(plan, selections)).rejects.toMatchObject({
+      code: 'invalid-candidate',
+      path: secondPath,
+    });
+
+    expect(await vault.read(firstPath)).toBe(firstSource);
+    expect(await vault.read(secondPath)).toBe(secondSource);
+    expect(vault.listMarkdownPaths().sort()).toEqual([firstPath, secondPath].sort());
+  });
+
   it('backs up each selected file before replacing only selected candidates', async () => {
     const { service, vault, index } = setup();
     const plan = await service.preview();
     const candidates = plan.files.get(path)!;
     const selected = new Map([
-      [candidates[0].candidateId, candidates[0].proposed],
-      [candidates[3].candidateId, candidates[3].proposed],
+      [candidates[0].candidateId, makeTask({
+        ...candidates[0].proposed,
+        quadrant: 'important-urgent',
+      })],
+      [candidates[3].candidateId, makeTask({
+        ...candidates[3].proposed,
+        quadrant: 'important-urgent',
+      })],
     ]);
 
     await service.apply(plan, selected);
@@ -175,10 +210,11 @@ describe('MigrationService', () => {
     const { service, vault } = setup();
     const plan = await service.preview();
     const candidate = plan.files.get(path)![0];
+    const corrected = makeTask({ ...candidate.proposed, quadrant: 'important-urgent' });
     vault.mutateAfterNextProcess(path, (written) => written.replace('状态:: 已完成', '状态:: 未知'));
 
     await expect(
-      service.apply(plan, new Map([[candidate.candidateId, candidate.proposed]])),
+      service.apply(plan, new Map([[candidate.candidateId, corrected]])),
     ).rejects.toMatchObject({
       code: 'verification-failed',
     });
@@ -190,11 +226,12 @@ describe('MigrationService', () => {
     const { service, vault } = setup();
     const plan = await service.preview();
     const candidate = plan.files.get(path)![0];
+    const corrected = makeTask({ ...candidate.proposed, quadrant: 'important-urgent' });
     const newer = fixture.replace(candidate.originalText, `${candidate.originalText} concurrent`);
     vault.mutateBeforeNextProcess(path, () => newer);
 
     await expect(
-      service.apply(plan, new Map([[candidate.candidateId, candidate.proposed]])),
+      service.apply(plan, new Map([[candidate.candidateId, corrected]])),
     ).rejects.toMatchObject({
       code: 'stale-plan',
     });

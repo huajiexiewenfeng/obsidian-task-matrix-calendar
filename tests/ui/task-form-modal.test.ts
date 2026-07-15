@@ -148,6 +148,22 @@ describe('TaskFormModal', () => {
     expect(modal.contentEl.isConnected).toBe(false);
   });
 
+  it('submits empty edit dates as explicit clears', async () => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    const modal = new TaskFormModal({} as App, service({ update }), () => '2026-07-15');
+    modal.openEdit(indexedTask());
+    input(modal, 'plannedDate').value = '';
+    input(modal, 'dueDate').value = '';
+
+    save(modal).click();
+    await flushPromises();
+
+    expect(update).toHaveBeenCalledWith('task-A1', expect.objectContaining({
+      plannedDate: '',
+      dueDate: '',
+    }));
+  });
+
   it('shows field errors and does not submit invalid title or date values', () => {
     const create = vi.fn<() => Promise<TaskNode>>();
     const modal = new TaskFormModal({} as App, service({ create }), () => '2026-07-15');

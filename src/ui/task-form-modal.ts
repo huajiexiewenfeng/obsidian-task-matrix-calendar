@@ -182,8 +182,8 @@ export class TaskFormModal extends Modal {
       title,
       details: String(values.get('details') ?? ''),
       quadrant: String(values.get('quadrant')) as TaskQuadrant,
-      plannedDate,
-      dueDate,
+      plannedDate: this.mode.kind === 'edit' ? plannedDate ?? '' : plannedDate,
+      dueDate: this.mode.kind === 'edit' ? dueDate ?? '' : dueDate,
       project: String(values.get('project') ?? ''),
       tags: String(values.get('tags') ?? '')
         .split(',')

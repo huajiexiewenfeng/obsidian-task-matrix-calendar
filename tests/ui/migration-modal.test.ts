@@ -208,6 +208,28 @@ describe('MigrationModal', () => {
     expect(modal.contentEl.isConnected).toBe(true);
   });
 
+  it('marks invalid selected task drafts inline and does not apply', async () => {
+    const apply = vi.fn().mockResolvedValue(undefined);
+    const modal = new MigrationModal({} as App, service({ apply }));
+    await modal.preview();
+    checkbox(modal, 'c-medium').click();
+    field(modal, 'c-medium', 'title').value = '   ';
+    change(field(modal, 'c-medium', 'title'));
+    field(modal, 'c-high', 'status').value = 'in-progress';
+    change(field(modal, 'c-high', 'status'));
+
+    confirm(modal).click();
+
+    expect(apply).not.toHaveBeenCalled();
+    expect(field(modal, 'c-medium', 'title').getAttribute('aria-invalid')).toBe('true');
+    expect(row(modal, 'c-medium').querySelector('[data-candidate-error]')?.textContent)
+      .toContain('任务标题不能为空');
+    expect(field(modal, 'c-high', 'quadrant').getAttribute('aria-invalid')).toBe('true');
+    expect(row(modal, 'c-high').querySelector('[data-candidate-error]')?.textContent)
+      .toContain('必须选择四象限分类');
+    expect(modal.contentEl.isConnected).toBe(true);
+  });
+
   it('locks selection, file toggles, editors and submit while apply is pending', async () => {
     let resolveApply!: () => void;
     const apply = vi.fn().mockReturnValue(new Promise<void>((resolve) => {

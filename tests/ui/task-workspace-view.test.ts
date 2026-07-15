@@ -85,6 +85,10 @@ function dragEvent(type: string, taskId: string): DragEvent {
   return event;
 }
 
+async function flushPromises(): Promise<void> {
+  for (let index = 0; index < 8; index += 1) await Promise.resolve();
+}
+
 describe('TaskWorkspaceView', () => {
   it('uses one workspace for task creation and editing', async () => {
     const { view, leaf, form } = setup();
@@ -138,6 +142,24 @@ describe('TaskWorkspaceView', () => {
     expect(visibleTaskIds(view)).toEqual(['task-B1']);
   });
 
+  it('renders persistent visible labels for every filter control', async () => {
+    const { view } = setup();
+    await view.onOpen();
+
+    for (const [name, caption] of [
+      ['query', '搜索'],
+      ['project', '项目'],
+      ['status', '状态'],
+      ['risk', '截止风险'],
+      ['source', '来源'],
+    ]) {
+      const control = view.containerEl.querySelector<HTMLElement>(`[data-filter="${name}"]`)!;
+      const label = control.closest('label');
+      expect(label).not.toBeNull();
+      expect(label?.querySelector('[data-filter-label]')?.textContent).toBe(caption);
+    }
+  });
+
   it('keeps search focus and caret while filtering across multiple input renders', async () => {
     const { view } = setup();
     await view.onOpen();
@@ -187,14 +209,13 @@ describe('TaskWorkspaceView', () => {
     await view.onOpen();
 
     view.containerEl.querySelector<HTMLButtonElement>('[data-task-id="task-A1"] [data-action="start"]')!.click();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushPromises();
     expect(prompt.chooseQuadrant).toHaveBeenCalledWith('task-A1');
     expect(service.changeQuadrant).toHaveBeenCalledWith('task-A1', 'important-urgent');
     expect(service.transition).toHaveBeenCalledWith('task-A1', 'in-progress');
 
     view.containerEl.querySelector<HTMLButtonElement>('[data-task-id="task-A1"] [data-action="complete"]')!.click();
-    await Promise.resolve();
+    await flushPromises();
     expect(service.complete).toHaveBeenCalledWith('task-A1', 'important-urgent');
     view.containerEl.querySelector<HTMLButtonElement>('[data-task-id="task-A2"] [data-action="pause"]')!.click();
     view.containerEl.querySelector<HTMLButtonElement>('[data-task-id="task-B1"] [data-action="resume"]')!.click();
@@ -206,6 +227,83 @@ describe('TaskWorkspaceView', () => {
       .dispatchEvent(dragEvent('drop', 'task-A1'));
     await Promise.resolve();
     expect(service.changeQuadrant).toHaveBeenCalledWith('task-A1', 'not-important-urgent');
+  });
+
+  it('guards a double-click while an unclassified start prompt is pending', async () => {
+    let resolvePrompt!: (quadrant: 'important-urgent') => void;
+    const { view, service, prompt } = setup();
+    prompt.chooseQuadrant.mockReturnValue(new Promise((resolve) => {
+      resolvePrompt = resolve;
+    }));
+    await view.onOpen();
+
+    const start = view.containerEl.querySelector<HTMLButtonElement>(
+      '[data-task-id="task-A1"] [data-action="start"]',
+    )!;
+    start.click();
+    start.click();
+
+    expect(prompt.chooseQuadrant).toHaveBeenCalledTimes(1);
+    expect(
+      Array.from(
+        view.containerEl.querySelectorAll<HTMLButtonElement>(
+          '[data-task-id="task-A1"] .tmc-task-actions button',
+        ),
+      ).every((button) => button.disabled),
+    ).toBe(true);
+    expect(
+      Array.from(
+        view.containerEl.querySelectorAll<HTMLButtonElement>(
+          '[data-task-id="task-A2"] .tmc-task-actions button',
+        ),
+      ).every((button) => !button.disabled),
+    ).toBe(true);
+
+    resolvePrompt('important-urgent');
+    await flushPromises();
+    expect(service.changeQuadrant).toHaveBeenCalledTimes(1);
+    expect(service.transition).toHaveBeenCalledWith('task-A1', 'in-progress');
+  });
+
+  it('guards a double-click during a direct transition without blocking other cards', async () => {
+    let resolveTransition!: () => void;
+    const { view, service } = setup();
+    service.transition.mockReturnValueOnce(new Promise<void>((resolve) => {
+      resolveTransition = resolve;
+    }));
+    await view.onOpen();
+
+    const pause = view.containerEl.querySelector<HTMLButtonElement>(
+      '[data-task-id="task-A2"] [data-action="pause"]',
+    )!;
+    pause.click();
+    pause.click();
+
+    expect(service.transition).toHaveBeenCalledTimes(1);
+    expect(
+      Array.from(
+        view.containerEl.querySelectorAll<HTMLButtonElement>(
+          '[data-task-id="task-A2"] .tmc-task-actions button',
+        ),
+      ).every((button) => button.disabled),
+    ).toBe(true);
+    expect(
+      Array.from(
+        view.containerEl.querySelectorAll<HTMLButtonElement>(
+          '[data-task-id="task-A1"] .tmc-task-actions button',
+        ),
+      ).every((button) => !button.disabled),
+    ).toBe(true);
+
+    resolveTransition();
+    await flushPromises();
+    expect(
+      Array.from(
+        view.containerEl.querySelectorAll<HTMLButtonElement>(
+          '[data-task-id="task-A2"] .tmc-task-actions button',
+        ),
+      ).every((button) => !button.disabled),
+    ).toBe(true);
   });
 
   it('routes calendar drops through the shared task service', async () => {

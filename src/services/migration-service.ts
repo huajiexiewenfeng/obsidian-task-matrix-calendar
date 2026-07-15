@@ -1,5 +1,6 @@
 import { makeTask, type LegacyPriority, type TaskNode, type TaskStatus } from '../domain/task';
 import { createTaskId } from '../domain/id';
+import { validateTaskDraft } from '../domain/rules';
 import { isManagedMarkdownPath } from '../index/managed-path';
 import { parseTaskFile } from '../markdown/task-parser';
 import { ensureSchemaMarker, serializeTaskBlock } from '../markdown/task-serializer';
@@ -25,7 +26,11 @@ export interface MigrationPlan {
   createdAt: string;
 }
 
-export type MigrationErrorCode = 'stale-plan' | 'verification-failed' | 'backup-failed';
+export type MigrationErrorCode =
+  | 'invalid-candidate'
+  | 'stale-plan'
+  | 'verification-failed'
+  | 'backup-failed';
 
 export class MigrationError extends Error {
   readonly cause?: unknown;
@@ -184,6 +189,11 @@ export class MigrationService {
   }
 
   async apply(plan: MigrationPlan, selections: MigrationSelections): Promise<void> {
+    const selectedFiles: Array<[
+      string,
+      MigrationCandidate[],
+      SelectedCandidate[],
+    ]> = [];
     for (const [path, candidates] of plan.files) {
       const selected = candidates.flatMap((candidate): SelectedCandidate[] => {
         const correction = selections.get(candidate.candidateId);
@@ -192,6 +202,21 @@ export class MigrationService {
           : [];
       });
       if (selected.length === 0) continue;
+      selectedFiles.push([path, candidates, selected]);
+    }
+    for (const [path, , selected] of selectedFiles) {
+      for (const { candidate, proposed } of selected) {
+        const error = validateTaskDraft(proposed);
+        if (error) {
+          throw new MigrationError(
+            'invalid-candidate',
+            `${candidate.candidateId}：${error.message}`,
+            path,
+          );
+        }
+      }
+    }
+    for (const [path, candidates, selected] of selectedFiles) {
       await this.applyFile(path, candidates, selected, plan.createdAt);
     }
   }

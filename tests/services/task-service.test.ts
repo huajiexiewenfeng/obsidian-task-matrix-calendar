@@ -58,6 +58,22 @@ describe('TaskService', () => {
     expect(index.get(task.id)?.task.details).toBeUndefined();
   });
 
+  it('persists explicit clearing of both task dates', async () => {
+    const { service, index } = setup();
+    const task = await service.create({
+      title: '清除日期',
+      plannedDate: '2026-07-15',
+      dueDate: '2026-07-31',
+    });
+
+    await service.update(task.id, { plannedDate: '', dueDate: '' });
+
+    expect(index.get(task.id)?.task).toMatchObject({
+      plannedDate: undefined,
+      dueDate: undefined,
+    });
+  });
+
   it('rejects blank titles and invalid ISO dates before writing', async () => {
     const { service, vault, inbox } = setup();
 

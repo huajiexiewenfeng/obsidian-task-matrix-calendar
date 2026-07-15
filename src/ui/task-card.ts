@@ -37,11 +37,17 @@ function textElement(tag: keyof HTMLElementTagNameMap, className: string, text: 
   return element;
 }
 
-function actionButton(label: string, action: string, onClick: () => void): HTMLButtonElement {
+function actionButton(
+  label: string,
+  action: string,
+  onClick: () => void,
+  disabled: boolean,
+): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.dataset.action = action;
   button.textContent = label;
+  button.disabled = disabled;
   button.addEventListener('click', (event) => {
     event.stopPropagation();
     onClick();
@@ -55,6 +61,7 @@ export function renderTaskCard(
   progress: { done: number; total: number },
   risk: DateRisk,
   actions: TaskCardActions,
+  actionsDisabled = false,
 ): HTMLElement {
   const { task, location } = indexed;
   const card = document.createElement('article');
@@ -90,11 +97,31 @@ export function renderTaskCard(
 
   const controls = document.createElement('div');
   controls.className = 'tmc-task-actions';
-  controls.append(actionButton('编辑', 'open', () => actions.open(task.id)));
-  if (task.status === 'todo') controls.append(actionButton('开始', 'start', () => actions.start(task.id)));
-  if (task.status === 'in-progress') controls.append(actionButton('暂停', 'pause', () => actions.pause(task.id)));
-  if (task.status === 'paused') controls.append(actionButton('继续', 'resume', () => actions.resume(task.id)));
-  if (task.status !== 'done') controls.append(actionButton('完成', 'complete', () => actions.complete(task.id)));
+  controls.append(actionButton('编辑', 'open', () => actions.open(task.id), actionsDisabled));
+  if (task.status === 'todo') controls.append(actionButton(
+    '开始',
+    'start',
+    () => actions.start(task.id),
+    actionsDisabled,
+  ));
+  if (task.status === 'in-progress') controls.append(actionButton(
+    '暂停',
+    'pause',
+    () => actions.pause(task.id),
+    actionsDisabled,
+  ));
+  if (task.status === 'paused') controls.append(actionButton(
+    '继续',
+    'resume',
+    () => actions.resume(task.id),
+    actionsDisabled,
+  ));
+  if (task.status !== 'done') controls.append(actionButton(
+    '完成',
+    'complete',
+    () => actions.complete(task.id),
+    actionsDisabled,
+  ));
   card.append(controls);
   container.append(card);
   return card;

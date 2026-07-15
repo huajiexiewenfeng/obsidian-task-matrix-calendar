@@ -38,6 +38,7 @@ export type TaskWorkspaceCalendarRenderer = (
 ) => void;
 
 type TodayProvider = () => string;
+type TaskAction = 'start' | 'complete' | 'pause' | 'resume';
 
 const QUADRANTS: Array<[Exclude<TaskQuadrant, 'unclassified'>, string]> = [
   ['important-urgent', '重要且紧急'],
@@ -70,6 +71,7 @@ export class TaskWorkspaceView extends ItemView {
   private calendarCursor: Date;
   private selectedDate: string;
   private importing = false;
+  private readonly pendingTaskActions = new Map<string, TaskAction>();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -201,36 +203,45 @@ export class TaskWorkspaceView extends ItemView {
         }
       }
     });
-    toolbar.append(search);
+    toolbar.append(this.filterField('搜索', search));
 
     const options = deriveFilterOptions(this.index.snapshot().tasks);
     toolbar.append(
-      this.filterSelect(
+      this.filterField('项目', this.filterSelect(
         'project',
         this.filters.project,
         [['*', '项目：全部'], ...options.projects.map((project) => [project, project] as [string, string])],
         (value) => { this.filters.project = value; },
-      ),
-      this.filterSelect(
+      )),
+      this.filterField('状态', this.filterSelect(
         'status',
         this.filters.status,
         STATUS_OPTIONS,
         (value) => { this.filters.status = value as TaskWorkspaceFilterState['status']; },
-      ),
-      this.filterSelect(
+      )),
+      this.filterField('截止风险', this.filterSelect(
         'risk',
         this.filters.risk,
         RISK_OPTIONS,
         (value) => { this.filters.risk = value as TaskWorkspaceFilterState['risk']; },
-      ),
-      this.filterSelect(
+      )),
+      this.filterField('来源', this.filterSelect(
         'source',
         this.filters.sourcePath,
         [['*', '来源：全部'], ...options.sourcePaths.map((path) => [path, path] as [string, string])],
         (value) => { this.filters.sourcePath = value; },
-      ),
+      )),
     );
     return toolbar;
+  }
+
+  private filterField(caption: string, control: HTMLElement): HTMLLabelElement {
+    const label = document.createElement('label');
+    const text = document.createElement('span');
+    text.dataset.filterLabel = '';
+    text.textContent = caption;
+    label.append(text, control);
+    return label;
   }
 
   private filterSelect(
@@ -299,6 +310,7 @@ export class TaskWorkspaceView extends ItemView {
         this.progress(indexed),
         classifyDateRisk(indexed.task.dueDate, indexed.task.status, this.today(), this.dueSoonDays),
         this.actions(indexed),
+        this.pendingTaskActions.has(indexed.task.id),
       );
       card.addEventListener('dragstart', (event) => {
         event.dataTransfer?.setData('text/task-matrix-calendar', indexed.task.id);
@@ -350,7 +362,7 @@ export class TaskWorkspaceView extends ItemView {
     const id = indexed.task.id;
     return {
       open: () => this.openTask(id),
-      start: () => void this.run(async () => {
+      start: () => void this.runTaskAction(id, 'start', async () => {
         if (indexed.task.quadrant === 'unclassified') {
           const quadrant = await this.prompt.chooseQuadrant(id);
           if (!quadrant) return;
@@ -358,7 +370,7 @@ export class TaskWorkspaceView extends ItemView {
         }
         await this.service.transition(id, 'in-progress');
       }),
-      complete: () => void this.run(async () => {
+      complete: () => void this.runTaskAction(id, 'complete', async () => {
         if (indexed.task.quadrant === 'unclassified') {
           const quadrant = await this.prompt.chooseQuadrant(id);
           if (!quadrant) return;
@@ -367,8 +379,16 @@ export class TaskWorkspaceView extends ItemView {
         }
         await this.service.complete(id);
       }),
-      pause: () => void this.run(() => this.service.transition(id, 'paused')),
-      resume: () => void this.run(() => this.service.transition(id, 'in-progress')),
+      pause: () => void this.runTaskAction(
+        id,
+        'pause',
+        () => this.service.transition(id, 'paused'),
+      ),
+      resume: () => void this.runTaskAction(
+        id,
+        'resume',
+        () => this.service.transition(id, 'in-progress'),
+      ),
     };
   }
 
@@ -383,6 +403,24 @@ export class TaskWorkspaceView extends ItemView {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       new Notice(`任务操作失败：${message}`);
+      this.render();
+    }
+  }
+
+  private async runTaskAction(
+    taskId: string,
+    actionName: TaskAction,
+    action: () => Promise<unknown>,
+  ): Promise<void> {
+    if (this.pendingTaskActions.has(taskId)) return;
+    this.pendingTaskActions.set(taskId, actionName);
+    this.render();
+    try {
+      await this.run(action);
+    } finally {
+      if (this.pendingTaskActions.get(taskId) === actionName) {
+        this.pendingTaskActions.delete(taskId);
+      }
       this.render();
     }
   }
