@@ -534,8 +534,6 @@
 }
 
 .tmc-import-warning,
-[data-migration-failures],
-[data-migration-error],
 [data-candidate-error],
 .tmc-import-wizard [data-import-error],
 .tmc-import-wizard [data-candidate-error],

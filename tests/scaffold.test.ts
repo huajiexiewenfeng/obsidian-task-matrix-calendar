@@ -34,7 +34,6 @@ describe('plugin scaffold', () => {
       '.tmc-calendar-view',
       '[data-role="selected-day"]',
       '[data-role="unscheduled"]',
-      '[data-migration-error]',
       '[data-form-error]',
       '.tmc-calendar-day.is-selected',
       '.task-matrix-calendar textarea',
@@ -55,6 +54,8 @@ describe('plugin scaffold', () => {
       '.tmc-source-path',
       '.tmc-form-error',
       '.tmc-migration-row',
+      '[data-migration-failures]',
+      '[data-migration-error]',
     ]) {
       expect(styles).not.toContain(obsoleteSelector);
     }
@@ -80,6 +81,7 @@ describe('plugin scaffold', () => {
       '开始日期可输入 `YYYYMMDD` 或 `YYYY-MM-DD`，保存为 `计划日期:: YYYY-MM-DD`。',
       '旧任务导入先选择 Markdown 文件，再核对候选，最后确认备份与写入。',
       '复选框候选默认选中；普通列表候选默认不选中。',
+      '最终确认时，插件会先为每个来源创建时间戳备份，再在写入事务中检查来源是否变化；过期计划会被拒绝且不会改动源文档。',
       '  - 详情::',
       '    > 第一行',
     ]) {
