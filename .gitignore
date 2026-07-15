@@ -6,3 +6,4 @@ main.js
 dev-vault/
 data.json
 *.backup-*/
+.superpowers/
