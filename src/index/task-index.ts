@@ -54,7 +54,7 @@ export class TaskIndex {
     return this.tasks.filter((item) => {
       const { task, location } = item;
       if (query) {
-        const searchable = [task.title, task.project ?? '', ...task.tags]
+        const searchable = [task.title, task.details ?? '', task.project ?? '', ...task.tags]
           .join('\n')
           .toLocaleLowerCase();
         if (!searchable.includes(query)) return false;

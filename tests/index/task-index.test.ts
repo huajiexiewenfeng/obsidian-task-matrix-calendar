@@ -5,6 +5,7 @@ import { parseTaskFile } from '../../src/markdown/task-parser';
 interface BlockOptions {
   id: string;
   title: string;
+  details?: string;
   status?: string;
   quadrant?: string;
   project?: string;
@@ -23,7 +24,11 @@ function result(path: string, options: BlockOptions) {
   if (options.project) lines.push(`  - 项目:: ${options.project}`);
   if (options.tags) lines.push(`  - 标签:: ${options.tags}`);
   if (options.dueDate) lines.push(`  - 截止日期:: ${options.dueDate}`);
-  return parseTaskFile(path, lines.join('\n'));
+  const parsed = parseTaskFile(path, lines.join('\n'));
+  if (options.details !== undefined && parsed.tasks[0]) {
+    parsed.tasks[0].task.details = options.details;
+  }
+  return parsed;
 }
 
 describe('TaskIndex', () => {
@@ -93,5 +98,17 @@ describe('TaskIndex', () => {
     );
 
     expect(matches.map((item) => item.task.id)).toEqual(['task-0PEN1']);
+  });
+
+  it('includes task details in text search', () => {
+    const index = new TaskIndex();
+    index.replaceFile('任务/details.md', result('任务/details.md', {
+      id: 'task-DETA11',
+      title: '发布插件',
+      details: '第一行\n第二行需要复核',
+    }));
+
+    expect(index.query({ query: '第二行' }, '2026-07-15', 3).map((item) => item.task.id))
+      .toEqual(['task-DETA11']);
   });
 });
