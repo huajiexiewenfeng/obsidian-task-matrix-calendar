@@ -1,9 +1,11 @@
 import { makeTask, type LegacyPriority, type TaskNode, type TaskStatus } from '../domain/task';
 import { createTaskId } from '../domain/id';
+import { isManagedMarkdownPath } from '../index/managed-path';
+import { parseTaskFile, type ParseIssue } from '../markdown/task-parser';
 import { ensureSchemaMarker, serializeTaskBlock } from '../markdown/task-serializer';
 import type { TaskRepository } from '../persistence/obsidian-task-repository';
 import type { VaultProcessPort } from '../persistence/vault-port';
-import type { TaskMatrixCalendarSettings } from '../settings';
+import { normalizeVaultPath, type TaskMatrixCalendarSettings } from '../settings';
 
 export type MigrationConfidence = 'high' | 'medium' | 'low';
 
@@ -19,6 +21,7 @@ export interface MigrationCandidate {
 
 export interface MigrationPlan {
   files: Map<string, MigrationCandidate[]>;
+  failures: Map<string, string>;
   createdAt: string;
 }
 
@@ -41,6 +44,13 @@ export class MigrationError extends Error {
 
 type IdFactory = () => string;
 type Clock = () => string;
+
+interface SelectedCandidate {
+  candidate: MigrationCandidate;
+  proposed: TaskNode;
+}
+
+type MigrationSelections = ReadonlyMap<string, TaskNode> | ReadonlySet<string>;
 
 interface DateHeading {
   date: string;
@@ -106,12 +116,37 @@ export class MigrationService {
     private readonly now: Clock = () => new Date().toISOString(),
   ) {}
 
-  async preview(paths: string[]): Promise<MigrationPlan> {
+  async preview(paths?: readonly string[]): Promise<MigrationPlan> {
     const files = new Map<string, MigrationCandidate[]>();
-    for (const path of [...new Set(paths)]) {
-      const source = await this.vault.read(path);
+    const failures = new Map<string, string>();
+    const eligiblePaths = new Map<string, string>();
+    for (const path of paths ?? this.vault.listMarkdownPaths()) {
+      const normalized = normalizeVaultPath(path);
+      if (!isManagedMarkdownPath(normalized, this.settings)) continue;
+      const key = normalized.toLocaleLowerCase();
+      if (!eligiblePaths.has(key)) eligiblePaths.set(key, normalized);
+    }
+
+    for (const path of eligiblePaths.values()) {
+      let source: string;
+      try {
+        source = await this.vault.read(path);
+      } catch (error) {
+        failures.set(path, error instanceof Error ? error.message : String(error));
+        continue;
+      }
       const lines = source.split(/\r\n|\n/);
       const candidates: MigrationCandidate[] = [];
+      const managedLines = new Set<number>();
+      for (const indexed of parseTaskFile(path, source).tasks) {
+        for (
+          let line = indexed.location.startLine;
+          line <= indexed.location.endLine;
+          line += 1
+        ) {
+          managedLines.add(line);
+        }
+      }
       let activeDate: string | undefined;
       for (let line = 0; line < lines.length; line += 1) {
         const heading = headingDate(lines[line]);
@@ -119,6 +154,7 @@ export class MigrationService {
           activeDate = heading.date;
           continue;
         }
+        if (managedLines.has(line)) continue;
         if (!activeDate || !lines[line].trim()) continue;
         const confidence = candidateConfidence(lines[line]);
         if (!confidence) continue;
@@ -144,12 +180,21 @@ export class MigrationService {
       }
       files.set(path, candidates);
     }
-    return { files, createdAt: this.now() };
+    return { files, failures, createdAt: this.now() };
   }
 
-  async apply(plan: MigrationPlan, selectedCandidateIds: Set<string>): Promise<void> {
+  async apply(plan: MigrationPlan, selections: MigrationSelections): Promise<void> {
     for (const [path, candidates] of plan.files) {
-      const selected = candidates.filter((item) => selectedCandidateIds.has(item.candidateId));
+      const selected = candidates.flatMap((candidate): SelectedCandidate[] => {
+        const correction = isCorrectionMap(selections)
+          ? selections.get(candidate.candidateId)
+          : selections.has(candidate.candidateId)
+            ? candidate.proposed
+            : undefined;
+        return correction
+          ? [{ candidate, proposed: { ...correction, id: candidate.proposed.id } }]
+          : [];
+      });
       if (selected.length === 0) continue;
       await this.applyFile(path, candidates, selected, plan.createdAt);
     }
@@ -158,10 +203,11 @@ export class MigrationService {
   private async applyFile(
     path: string,
     allCandidates: MigrationCandidate[],
-    selected: MigrationCandidate[],
+    selected: SelectedCandidate[],
     createdAt: string,
   ): Promise<void> {
     const before = await this.vault.read(path);
+    const beforeIssues = parseTaskFile(path, before).issues;
     const backupPath = `${this.settings.backupRoot}/${backupTimestamp(createdAt)}/${path}`;
     try {
       await this.vault.create(backupPath, before);
@@ -173,7 +219,10 @@ export class MigrationService {
       await this.vault.process(path, (current) => {
         const eol: '\n' | '\r\n' = current.includes('\r\n') ? '\r\n' : '\n';
         const lines = current.split(/\r\n|\n/);
-        for (const candidate of [...selected].sort((a, b) => b.startLine - a.startLine)) {
+        for (const selection of [...selected].sort(
+          (a, b) => b.candidate.startLine - a.candidate.startLine,
+        )) {
+          const { candidate, proposed } = selection;
           const actual = lines.slice(candidate.startLine, candidate.endLine + 1).join(eol);
           if (actual !== candidate.originalText) {
             throw new MigrationError('stale-plan', '源文档已变化，请重新预览。', path);
@@ -181,7 +230,7 @@ export class MigrationService {
           lines.splice(
             candidate.startLine,
             candidate.endLine - candidate.startLine + 1,
-            ...serializeTaskBlock(candidate.proposed, [], 0, eol).split(eol),
+            ...serializeTaskBlock(proposed, [], 0, eol).split(eol),
           );
         }
         return ensureSchemaMarker(lines.join(eol), eol);
@@ -196,7 +245,7 @@ export class MigrationService {
       );
       const missingSelected = [...selectedIds].some((id) => !parsedIds.has(id));
       const changedUnselected = unselected.some((item) => !verifiedSource.includes(item.originalText));
-      if (missingSelected || changedUnselected || verified.issues.length > 0) {
+      if (missingSelected || changedUnselected || hasNewParseIssues(beforeIssues, verified.issues)) {
         throw new MigrationError('verification-failed', '迁移写入复核失败。', path);
       }
       await this.repository.refresh(path);
@@ -208,6 +257,31 @@ export class MigrationService {
   }
 }
 
-function selectedCandidateIdsFor(selected: MigrationCandidate[]): Set<string> {
-  return new Set(selected.map((item) => item.candidateId));
+function isCorrectionMap(
+  selections: MigrationSelections,
+): selections is ReadonlyMap<string, TaskNode> {
+  return 'get' in selections;
+}
+
+function selectedCandidateIdsFor(selected: SelectedCandidate[]): Set<string> {
+  return new Set(selected.map((item) => item.candidate.candidateId));
+}
+
+function issueSignature(issue: ParseIssue): string {
+  return `${issue.code}\u0000${issue.taskId ?? ''}\u0000${issue.message}`;
+}
+
+function hasNewParseIssues(before: ParseIssue[], after: ParseIssue[]): boolean {
+  const remaining = new Map<string, number>();
+  for (const issue of before) {
+    const key = issueSignature(issue);
+    remaining.set(key, (remaining.get(key) ?? 0) + 1);
+  }
+  for (const issue of after) {
+    const key = issueSignature(issue);
+    const count = remaining.get(key) ?? 0;
+    if (count === 0) return true;
+    remaining.set(key, count - 1);
+  }
+  return false;
 }

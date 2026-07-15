@@ -7,6 +7,7 @@ import type { MigrationPlan } from '../../src/services/migration-service';
 
 const plan: MigrationPlan = {
   createdAt: '2026-07-15T00:00:00.000Z',
+  failures: new Map(),
   files: new Map([['任务/旧.md', [{
     candidateId: 'c1', sourcePath: '任务/旧.md', startLine: 2, endLine: 2,
     originalText: '- 旧任务 P1', proposed: makeTask({ id: 'task-A1', title: '旧任务', legacyPriority: 'P1' }),

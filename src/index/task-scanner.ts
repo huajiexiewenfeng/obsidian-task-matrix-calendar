@@ -1,8 +1,8 @@
-import { minimatch } from 'minimatch';
 import type { TaskMatrixCalendarSettings } from '../settings';
 import { normalizeVaultPath } from '../settings';
 import { parseTaskFile } from '../markdown/task-parser';
 import type { TaskIndex } from './task-index';
+import { isManagedMarkdownPath } from './managed-path';
 
 export interface VaultReadPort {
   listMarkdownPaths(): string[];
@@ -16,12 +16,6 @@ export interface MetadataHints {
 
 export interface MetadataHintProvider {
   getHints(path: string): MetadataHints | null;
-}
-
-function isWithin(path: string, root: string): boolean {
-  const normalizedPath = normalizeVaultPath(path).toLocaleLowerCase();
-  const normalizedRoot = normalizeVaultPath(root).toLocaleLowerCase();
-  return normalizedPath === normalizedRoot || normalizedPath.startsWith(`${normalizedRoot}/`);
 }
 
 export class TaskScanner {
@@ -77,14 +71,6 @@ export class TaskScanner {
   }
 
   private shouldScan(path: string): boolean {
-    if (!/\.md$/i.test(path)) return false;
-    if (!this.settings.scanRoots.some((root) => isWithin(path, root))) return false;
-    if (normalizeVaultPath(path).toLocaleLowerCase() === normalizeVaultPath(this.settings.trashPath).toLocaleLowerCase()) {
-      return false;
-    }
-    if (isWithin(path, this.settings.backupRoot)) return false;
-    return !this.settings.excludeGlobs.some((glob) =>
-      minimatch(path, glob, { dot: true, nocase: true }),
-    );
+    return isManagedMarkdownPath(path, this.settings);
   }
 }

@@ -1,4 +1,5 @@
 export interface VaultProcessPort {
+  listMarkdownPaths(): string[];
   exists(path: string): boolean;
   read(path: string): Promise<string>;
   create(path: string, source: string): Promise<void>;

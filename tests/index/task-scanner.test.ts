@@ -15,6 +15,25 @@ function task(id: string, title: string): string {
 }
 
 describe('TaskScanner', () => {
+  it('uses the shared case-insensitive managed-path rules', () => {
+    const scanner = new TaskScanner(
+      new FakeVault(),
+      new TaskIndex(),
+      {
+        ...DEFAULT_SETTINGS,
+        scanRoots: ['Tasks'],
+        excludeGlobs: ['**/skip*.md'],
+        trashPath: 'Tasks/Trash.md',
+        backupRoot: 'Tasks/Backups',
+      },
+    );
+
+    expect(scanner.isManagedPath('tasks/Project/Note.MD')).toBe(true);
+    expect(scanner.isManagedPath('TASKS/project/SKIP-note.md')).toBe(false);
+    expect(scanner.isManagedPath('tasks/trash.md')).toBe(false);
+    expect(scanner.isManagedPath('tasks/backups/2026/note.md')).toBe(false);
+  });
+
   it('deduplicates roots and always excludes trash and backup paths', async () => {
     const vault = new FakeVault({
       '任务/a.md': task('task-A1', '任务 A'),
