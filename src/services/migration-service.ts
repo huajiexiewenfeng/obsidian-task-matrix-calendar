@@ -50,7 +50,7 @@ interface SelectedCandidate {
   proposed: TaskNode;
 }
 
-type MigrationSelections = ReadonlyMap<string, TaskNode> | ReadonlySet<string>;
+type MigrationSelections = ReadonlyMap<string, TaskNode>;
 
 interface DateHeading {
   date: string;
@@ -186,11 +186,7 @@ export class MigrationService {
   async apply(plan: MigrationPlan, selections: MigrationSelections): Promise<void> {
     for (const [path, candidates] of plan.files) {
       const selected = candidates.flatMap((candidate): SelectedCandidate[] => {
-        const correction = isCorrectionMap(selections)
-          ? selections.get(candidate.candidateId)
-          : selections.has(candidate.candidateId)
-            ? candidate.proposed
-            : undefined;
+        const correction = selections.get(candidate.candidateId);
         return correction
           ? [{ candidate, proposed: { ...correction, id: candidate.proposed.id } }]
           : [];
@@ -259,12 +255,6 @@ export class MigrationService {
       throw new MigrationError('verification-failed', '迁移失败，已恢复备份。', path, error);
     }
   }
-}
-
-function isCorrectionMap(
-  selections: MigrationSelections,
-): selections is ReadonlyMap<string, TaskNode> {
-  return 'get' in selections;
 }
 
 function selectedCandidateIdsFor(selected: SelectedCandidate[]): Set<string> {

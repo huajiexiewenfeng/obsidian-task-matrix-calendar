@@ -154,7 +154,10 @@ describe('MigrationService', () => {
     const { service, vault, index } = setup();
     const plan = await service.preview();
     const candidates = plan.files.get(path)!;
-    const selected = new Set([candidates[0].candidateId, candidates[3].candidateId]);
+    const selected = new Map([
+      [candidates[0].candidateId, candidates[0].proposed],
+      [candidates[3].candidateId, candidates[3].proposed],
+    ]);
 
     await service.apply(plan, selected);
 
