@@ -16,14 +16,15 @@ describe('extractLegacyCandidates', () => {
       () => `task-LEGACY${++next}`,
     );
 
+    expect(candidates).toHaveLength(3);
     expect(candidates.map((item) => item.proposed.title)).toEqual([
-      '明确待办', '明确完成', '普通列表', '编号列表',
+      '明确待办', '普通列表', '编号列表',
     ]);
     expect(candidates.map((item) => item.recognition.kind)).toEqual([
-      'checkbox', 'checkbox', 'list-item', 'list-item',
+      'checkbox', 'list-item', 'list-item',
     ]);
     expect(candidates.map((item) => item.recognition.defaultSelected)).toEqual([
-      true, true, false, false,
+      true, false, false,
     ]);
     expect(candidates[0]).toMatchObject({
       candidateId: 'migration:任务/旧任务.md:4',
@@ -34,10 +35,34 @@ describe('extractLegacyCandidates', () => {
       recognition: { reason: 'Markdown 复选框' },
       proposed: { plannedDate: '2026-07-15', status: 'todo', legacyPriority: 'P1' },
     });
-    expect(candidates[1].proposed.status).toBe('done');
-    expect(candidates[2].proposed.status).toBe('in-progress');
+    expect(candidates[1].proposed.status).toBe('in-progress');
     expect(candidates.some((item) => item.originalText === '普通正文 P0')).toBe(false);
-    expect(candidates.some((item) => item.proposed.id === 'task-MANAGED1')).toBe(false);
+    expect(candidates.map((item) => item.originalText)).not.toContain(
+      '- [ ] 已受管任务 #task ^task-MANAGED1',
+    );
+    expect(candidates.map((item) => item.proposed.title)).not.toContain('已受管任务');
+    expect(candidates.map((item) => item.startLine)).not.toContain(12);
+  });
+
+  it('maps a checked checkbox to done independently from the strict fixture', () => {
+    const candidates = extractLegacyCandidates(
+      '任务/已完成.md',
+      '- [x] 明确完成（完成）',
+      () => 'task-LEGACY1',
+    );
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      originalText: '- [x] 明确完成（完成）',
+      recognition: {
+        kind: 'checkbox',
+        defaultSelected: true,
+      },
+      proposed: {
+        title: '明确完成',
+        status: 'done',
+      },
+    });
   });
 
   it('normalizes compact date headings for recognized list items only', () => {
