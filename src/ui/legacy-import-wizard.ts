@@ -50,6 +50,7 @@ export class LegacyImportWizard extends Modal {
   private readonly corrections = new Map<string, TaskNode>();
   private pending = false;
   private loading = false;
+  private active = false;
   private errorMessage?: string;
   private readonly candidateErrors = new Map<string, CandidateError>();
 
@@ -62,6 +63,7 @@ export class LegacyImportWizard extends Modal {
   }
 
   openWizard(): void {
+    if (this.active || this.loading || this.pending) return;
     this.step = 'select';
     this.files = this.service.listEligibleFiles();
     this.selectedFiles.clear();
@@ -76,7 +78,12 @@ export class LegacyImportWizard extends Modal {
   }
 
   onOpen(): void {
+    this.active = true;
     this.render();
+  }
+
+  onClose(): void {
+    this.active = false;
   }
 
   private render(): void {

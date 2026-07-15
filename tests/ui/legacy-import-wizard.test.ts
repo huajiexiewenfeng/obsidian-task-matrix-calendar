@@ -210,6 +210,30 @@ describe('LegacyImportWizard', () => {
     expect(field(wizard, 'checkbox', 'tags').value).toBe('旧任务, 待复核');
   });
 
+  it('ignores openWizard reentry while review is open and preserves the active session', async () => {
+    const migrationService = service();
+    const wizard = new LegacyImportWizard({} as App, migrationService, '备份/旧任务导入');
+    await openReview(wizard);
+    change(field(wizard, 'checkbox', 'title'), '重入后保留');
+    candidateSelection(wizard, 'list').click();
+
+    wizard.openWizard();
+
+    expect(wizard.contentEl.dataset.step).toBe('review');
+    expect(field(wizard, 'checkbox', 'title').value).toBe('重入后保留');
+    expect(candidateSelection(wizard, 'checkbox').checked).toBe(true);
+    expect(candidateSelection(wizard, 'list').checked).toBe(true);
+    expect(migrationService.listEligibleFiles).toHaveBeenCalledTimes(1);
+
+    action(wizard, 'back').click();
+    expect(fileSelection(wizard).checked).toBe(true);
+    action(wizard, 'continue').click();
+    await flushPromises();
+    expect(field(wizard, 'checkbox', 'title').value).toBe('重入后保留');
+    expect(candidateSelection(wizard, 'checkbox').checked).toBe(true);
+    expect(candidateSelection(wizard, 'list').checked).toBe(true);
+  });
+
   it('does not leave review while a selected draft is invalid', async () => {
     const wizard = new LegacyImportWizard({} as App, service(), '备份/旧任务导入');
     await openReview(wizard);
@@ -327,5 +351,38 @@ describe('LegacyImportWizard', () => {
     expect(action(wizard, 'confirm').disabled).toBe(false);
     expect(action(wizard, 'back').disabled).toBe(false);
     expect(action(wizard, 'cancel').disabled).toBe(false);
+  });
+
+  it('ignores reentry during pending apply and can retry after the apply rejects', async () => {
+    let rejectFirst!: (error: Error) => void;
+    const firstApply = new Promise<void>((_resolve, reject) => {
+      rejectFirst = reject;
+    });
+    const apply = vi.fn()
+      .mockImplementationOnce(() => firstApply)
+      .mockResolvedValueOnce(undefined);
+    const migrationService = service({ apply });
+    const wizard = new LegacyImportWizard({} as App, migrationService, '备份/旧任务导入');
+    await openConfirm(wizard);
+
+    action(wizard, 'confirm').click();
+    wizard.openWizard();
+
+    expect(wizard.contentEl.dataset.step).toBe('confirm');
+    expect(action(wizard, 'confirm').disabled).toBe(true);
+    expect(migrationService.listEligibleFiles).toHaveBeenCalledTimes(1);
+    rejectFirst(new Error('首次写入失败'));
+    await flushPromises();
+
+    expect(wizard.contentEl.textContent).toContain('首次写入失败');
+    expect(action(wizard, 'confirm').disabled).toBe(false);
+    action(wizard, 'confirm').click();
+    await flushPromises();
+
+    expect(apply).toHaveBeenCalledTimes(2);
+    expect((Notice as unknown as { messages: string[] }).messages).toContain(
+      '已导入 1 个旧任务。',
+    );
+    expect(document.body.contains(wizard.contentEl)).toBe(false);
   });
 });
