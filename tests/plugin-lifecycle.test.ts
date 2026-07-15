@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { WorkspaceLeaf, type App, type ItemView, type PluginManifest } from 'obsidian';
 import TaskMatrixCalendarPlugin, { COMMANDS } from '../src/main';
-import { MigrationModal } from '../src/ui/migration-modal';
+import { LegacyImportWizard } from '../src/ui/legacy-import-wizard';
 import {
   TASK_WORKSPACE_VIEW_TYPE,
   TaskWorkspaceView,
@@ -15,6 +15,7 @@ type RecordedPlugin = TaskMatrixCalendarPlugin & {
   }>;
   registeredCommands: Array<{
     id: string;
+    name?: string;
     callback?: () => unknown;
   }>;
   ribbonIcons: Array<{ callback: () => void }>;
@@ -102,8 +103,8 @@ describe('plugin lifecycle', () => {
     plugin.onunload();
   });
 
-  it('uses the same migration modal preview from the command and workspace button', async () => {
-    const preview = vi.spyOn(MigrationModal.prototype, 'preview').mockResolvedValue(undefined);
+  it('uses the same import wizard from the command and workspace button', async () => {
+    const openWizard = vi.spyOn(LegacyImportWizard.prototype, 'openWizard');
     const { plugin, leaf } = setupPlugin();
     await plugin.onload();
     const openTasks = plugin.registeredCommands.find((item) => item.id === COMMANDS.openTasks)!;
@@ -116,10 +117,11 @@ describe('plugin lifecycle', () => {
     workspace.containerEl.querySelector<HTMLButtonElement>('[data-action="import-legacy"]')!.click();
     await Promise.resolve();
 
-    expect(preview).toHaveBeenCalledTimes(2);
-    expect(preview.mock.contexts[0]).toBe(preview.mock.contexts[1]);
-    expect(preview).toHaveBeenNthCalledWith(1);
-    expect(preview).toHaveBeenNthCalledWith(2);
+    expect(migrate.name).toBe('导入旧任务');
+    expect(openWizard).toHaveBeenCalledTimes(2);
+    expect(openWizard.mock.contexts[0]).toBe(openWizard.mock.contexts[1]);
+    expect(openWizard).toHaveBeenNthCalledWith(1);
+    expect(openWizard).toHaveBeenNthCalledWith(2);
     await workspace.onClose();
     plugin.onunload();
   });

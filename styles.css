@@ -433,47 +433,145 @@
   text-align: left;
 }
 
-.tmc-migration-modal section {
-  margin-block: 12px;
+.tmc-import-wizard {
+  display: grid;
+  gap: 12px;
+  max-height: min(82vh, 56rem);
+  overflow-y: auto;
+  color: var(--text-normal);
+  background: var(--background-primary);
 }
 
-.tmc-migration-row {
+.tmc-import-progress {
   display: grid;
-  grid-template-columns: auto minmax(12rem, 1fr) auto minmax(18rem, 1.4fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.tmc-import-progress li {
+  padding: 8px 10px;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+
+.tmc-import-progress li[data-current="true"] {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+}
+
+.tmc-import-file-list,
+.tmc-import-review,
+.tmc-import-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.tmc-import-file-list {
+  max-height: min(52vh, 34rem);
+  overflow-y: auto;
+}
+
+.tmc-import-file {
+  display: flex;
   gap: 8px;
   align-items: start;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.tmc-migration-row pre {
-  margin: 0;
-  color: var(--text-normal);
+  padding: 10px;
   background: var(--background-secondary);
-  white-space: pre-wrap;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
 }
 
-.tmc-migration-editor {
+.tmc-import-candidate {
   display: grid;
+  grid-template-columns: auto minmax(12rem, 0.9fr) minmax(18rem, 1.4fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.tmc-import-evidence {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+}
+
+.tmc-import-evidence pre {
+  margin: 0;
+  padding: 8px;
+  color: var(--text-normal);
+  background: var(--background-primary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tmc-import-evidence p {
+  margin: 0;
+}
+
+.tmc-import-candidate-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.tmc-migration-editor label {
+.tmc-import-candidate-fields label {
   display: grid;
   gap: 4px;
 }
 
-.tmc-migration-editor textarea {
+.tmc-import-candidate-fields textarea {
+  min-height: 7rem;
   resize: vertical;
 }
 
+.tmc-import-summary {
+  padding: 12px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.tmc-import-summary p {
+  margin: 0;
+}
+
+.tmc-import-warning,
 .tmc-migration-errors,
-.tmc-migration-modal [data-migration-failures],
-.tmc-migration-modal [data-migration-error],
-.tmc-migration-modal [data-candidate-error],
+[data-migration-failures],
+[data-migration-error],
+[data-candidate-error],
+.tmc-import-wizard [data-import-error],
+.tmc-import-wizard [data-candidate-error],
 .tmc-form-error,
 .tmc-task-form-modal [data-form-error] {
   color: var(--text-error);
+}
+
+.tmc-import-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-block: 12px 2px;
+  background: var(--background-primary);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.tmc-import-actions .mod-cta {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
 }
 
 .tmc-settings {
@@ -505,13 +603,6 @@
     grid-row: auto;
   }
 
-  .tmc-migration-row {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .tmc-migration-editor {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (max-width: 650px) {
@@ -532,6 +623,20 @@
 
   .tmc-calendar-view {
     overflow-x: auto;
+  }
+
+  .tmc-import-progress,
+  .tmc-import-candidate,
+  .tmc-import-candidate-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tmc-import-actions {
+    flex-direction: column;
+  }
+
+  .tmc-import-actions button {
+    width: 100%;
   }
 
   .tmc-calendar-grid {

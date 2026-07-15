@@ -13,13 +13,8 @@ import {
 
 export type { MigrationCandidate } from './legacy-task-candidates';
 
-// TODO(Task 5): remove confidence after the migration modal consumes recognition directly.
-export type MigrationPlanCandidate = MigrationCandidate & {
-  readonly confidence: 'high' | 'medium';
-};
-
 export interface MigrationPlan {
-  files: Map<string, MigrationPlanCandidate[]>;
+  files: Map<string, MigrationCandidate[]>;
   failures: Map<string, string>;
   createdAt: string;
 }
@@ -100,18 +95,12 @@ export class MigrationService {
       selected.set(actual.toLocaleLowerCase(), actual);
     }
 
-    const files = new Map<string, MigrationPlanCandidate[]>();
+    const files = new Map<string, MigrationCandidate[]>();
     const failures = new Map<string, string>();
     for (const path of selected.values()) {
       try {
         const source = await this.vault.read(path);
-        files.set(
-          path,
-          extractLegacyCandidates(path, source, this.makeId).map((candidate) => ({
-            ...candidate,
-            confidence: candidate.recognition.kind === 'checkbox' ? 'high' : 'medium',
-          })),
-        );
+        files.set(path, extractLegacyCandidates(path, source, this.makeId));
       } catch (error) {
         failures.set(path, error instanceof Error ? error.message : String(error));
       }

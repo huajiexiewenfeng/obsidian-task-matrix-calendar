@@ -23,7 +23,7 @@ import {
   type TaskMatrixCalendarSettings,
 } from './settings';
 import { ClassificationModal } from './ui/classification-modal';
-import { MigrationModal } from './ui/migration-modal';
+import { LegacyImportWizard } from './ui/legacy-import-wizard';
 import { TaskMatrixCalendarSettingTab } from './ui/settings-tab';
 import { TaskFormModal } from './ui/task-form-modal';
 import {
@@ -134,7 +134,11 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
     const migrationService = new MigrationService(repository, vault, this.settings);
     const coordinator = new ExternalCheckboxCoordinator(repository, index, prompt);
     const taskFormModal = new TaskFormModal(this.app, taskService, today);
-    const migrationModal = new MigrationModal(this.app, migrationService);
+    const importWizard = new LegacyImportWizard(
+      this.app,
+      migrationService,
+      this.settings.backupRoot,
+    );
     this.registerView(
       TASK_WORKSPACE_VIEW_TYPE,
       (leaf) => new TaskWorkspaceView(
@@ -145,7 +149,7 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
         taskFormModal,
         this.settings.dueSoonDays,
         today,
-        () => migrationModal.preview(),
+        () => Promise.resolve(importWizard.openWizard()),
       ),
     );
 
@@ -174,8 +178,8 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
     });
     this.addCommand({
       id: COMMANDS.migrate,
-      name: '预览旧任务迁移',
-      callback: () => void migrationModal.preview(),
+      name: '导入旧任务',
+      callback: () => importWizard.openWizard(),
     });
     this.addSettingTab(new TaskMatrixCalendarSettingTab(this.app, this, trashService, async () => scanner.scanAll()));
 
