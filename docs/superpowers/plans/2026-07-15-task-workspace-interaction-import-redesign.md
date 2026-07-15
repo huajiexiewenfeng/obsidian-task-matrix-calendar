@@ -242,8 +242,6 @@ git commit -m "feat: normalize task form dates and details"
 - Create: `src/ui/task-form-modal.ts`
 - Create: `tests/ui/task-form-modal.test.ts`
 - Modify: `tests/mocks/obsidian.ts:68-88`
-- Delete: `src/ui/task-editor-drawer.ts`
-- Delete: `tests/ui/task-editor-drawer.test.ts`
 
 **Interfaces:**
 - Consumes: `TaskService.create(input)` and `TaskService.update(id, patch)`.
@@ -336,21 +334,20 @@ private async submit(form: HTMLFormElement, save: HTMLButtonElement): Promise<vo
 
 Render `details` as `<textarea rows="6">`, render date fields as text inputs with `inputMode="numeric"` and placeholder `YYYYMMDD 或 YYYY-MM-DD`, and set `aria-invalid` on the field owning an inline error.
 
-- [ ] **Step 4: Remove the drawer and run tests**
+- [ ] **Step 4: Keep the compatibility drawer until the unified view replaces it, and run tests**
 
-Delete the drawer implementation/test; no production import may reference it.
+The existing matrix view still imports the drawer, so keep both drawer files unchanged in this task. Task 6 deletes the drawer and old matrix view together, preserving a compilable/testable branch after every task.
 
 ```powershell
 npx vitest run tests/ui/task-form-modal.test.ts
-rg -n "TaskEditorDrawer|task-editor-drawer" src tests
 ```
 
-Expected: modal tests PASS and `rg` returns no matches.
+Expected: modal tests PASS.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/ui/task-form-modal.ts tests/ui/task-form-modal.test.ts tests/mocks/obsidian.ts src/ui/task-editor-drawer.ts tests/ui/task-editor-drawer.test.ts
+git add src/ui/task-form-modal.ts tests/ui/task-form-modal.test.ts tests/mocks/obsidian.ts
 git commit -m "feat: add shared task form modal"
 ```
 
@@ -510,6 +507,8 @@ git commit -m "feat: render linked calendar panel"
 - Modify: `tests/ui/task-card.test.ts`
 - Delete: `src/ui/task-matrix-view.ts`
 - Delete: `tests/ui/task-matrix-view.test.ts`
+- Delete: `src/ui/task-editor-drawer.ts`
+- Delete: `tests/ui/task-editor-drawer.test.ts`
 
 **Interfaces:**
 - Produces: `TASK_WORKSPACE_VIEW_TYPE = 'task-matrix-calendar-task-workspace'`.
@@ -580,13 +579,13 @@ Use CSS line clamping later; keep full text in the DOM for accessibility and sea
 
 ```powershell
 npx vitest run tests/ui/task-workspace-view.test.ts tests/ui/task-card.test.ts tests/ui/calendar-view.test.ts
-rg -n "TaskMatrixView|TASK_MATRIX_VIEW_TYPE|new CalendarView" src tests
+rg -n "TaskMatrixView|TASK_MATRIX_VIEW_TYPE|TaskEditorDrawer|task-editor-drawer|new CalendarView" src tests
 ```
 
 Expected: tests PASS and the removed view classes have no references.
 
 ```powershell
-git add src/ui/task-workspace-view.ts tests/ui/task-workspace-view.test.ts src/ui/task-card.ts tests/ui/task-card.test.ts src/ui/task-matrix-view.ts tests/ui/task-matrix-view.test.ts
+git add src/ui/task-workspace-view.ts tests/ui/task-workspace-view.test.ts src/ui/task-card.ts tests/ui/task-card.test.ts src/ui/task-matrix-view.ts tests/ui/task-matrix-view.test.ts src/ui/task-editor-drawer.ts tests/ui/task-editor-drawer.test.ts
 git commit -m "feat: unify task and calendar workspace"
 ```
 
