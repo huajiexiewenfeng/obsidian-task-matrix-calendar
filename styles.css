@@ -493,6 +493,11 @@
   margin: 0;
 }
 
+.tmc-import-candidate-correction {
+  grid-column: 2 / -1;
+  min-width: 0;
+}
+
 .tmc-import-candidate-correction > summary {
   cursor: pointer;
   font-weight: 600;
@@ -629,6 +634,10 @@
   .tmc-import-candidate,
   .tmc-import-candidate-fields {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tmc-import-candidate-correction {
+    grid-column: 1;
   }
 
   .tmc-import-actions {

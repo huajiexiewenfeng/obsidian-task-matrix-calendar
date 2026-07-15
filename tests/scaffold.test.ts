@@ -71,6 +71,17 @@ describe('plugin scaffold', () => {
     }
   });
 
+  it('keeps the import correction disclosure across content columns and resets it on mobile', () => {
+    const styles = readFileSync('styles.css', 'utf8');
+
+    expect(styles).toMatch(
+      /\.tmc-import-candidate-correction\s*\{[^}]*grid-column:\s*2\s*\/\s*-1;[^}]*min-width:\s*0;/s,
+    );
+    expect(styles).toMatch(
+      /@media \(max-width: 650px\)\s*\{[\s\S]*?\.tmc-import-candidate-correction\s*\{[^}]*grid-column:\s*1;/,
+    );
+  });
+
   it('documents the released workspace, task form, and migration behavior', () => {
     const readme = readFileSync('README.md', 'utf8');
 
