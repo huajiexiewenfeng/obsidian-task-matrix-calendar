@@ -97,6 +97,32 @@ describe('renderCalendarPanel', () => {
     expect(transfer.setData).toHaveBeenCalledWith('text/task-matrix-calendar', 'task-A4');
     expect(onMove).toHaveBeenCalledWith('task-A4', '2026-07-20');
   });
+
+  it('keeps selected-day tasks visible and editable when the cursor is in another month', () => {
+    const host = document.createElement('div');
+    const onEdit = vi.fn();
+    renderCalendarPanel(host, {
+      cursor: new Date(Date.UTC(2026, 7, 1)),
+      selectedDate: '2026-07-15',
+      tasks,
+      today: '2026-07-15',
+      onChangeMonth: vi.fn(),
+      onSelectDate: vi.fn(),
+      onEdit,
+      onMove: vi.fn(),
+    });
+
+    const selectedTask = host.querySelector<HTMLButtonElement>(
+      '[data-role="selected-day"] [data-calendar-task-id="task-A1"]',
+    );
+    expect(Array.from(
+      host.querySelectorAll<HTMLElement>('[data-role="selected-day"] [data-calendar-task-id]'),
+      (item) => item.dataset.calendarTaskId,
+    )).toEqual(['task-A1', 'task-A2', 'task-A3']);
+    expect(selectedTask?.textContent).toBe('选中日计划');
+    selectedTask?.click();
+    expect(onEdit).toHaveBeenCalledWith('task-A1');
+  });
 });
 
 describe('CalendarView', () => {

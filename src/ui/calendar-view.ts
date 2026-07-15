@@ -160,7 +160,14 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
   const selectedTitle = document.createElement('h3');
   selectedTitle.textContent = options.selectedDate;
   selectedDay.append(selectedTitle);
-  const selectedEntries = model.find((day) => day.date === options.selectedDate)?.entries ?? [];
+  const selectedCursor = new Date(`${options.selectedDate}T00:00:00Z`);
+  const selectedModel = buildMonthModel(
+    selectedCursor.getUTCFullYear(),
+    selectedCursor.getUTCMonth(),
+    options.tasks,
+    options.today,
+  );
+  const selectedEntries = selectedModel.find((day) => day.date === options.selectedDate)?.entries ?? [];
   for (const entry of selectedEntries) {
     const task = taskById.get(entry.taskId);
     if (task) selectedDay.append(createTaskButton(task.id, task.title, options.onEdit));
