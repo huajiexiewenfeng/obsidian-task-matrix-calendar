@@ -332,4 +332,24 @@ describe('MigrationService', () => {
 
     expect(await vault.read(path)).toContain('准备新方案');
   });
+
+  it('backs up and refuses a plan when only non-candidate content changed after preview', async () => {
+    const { service, vault } = setup();
+    const plan = await service.preview([path]);
+    const candidate = plan.files.get(path)![0];
+    const corrected = makeTask({ ...candidate.proposed, quadrant: 'important-urgent' });
+    const newer = fixture.replace('这是一段无关说明文字。', '这是预览后更新的说明文字。');
+    vault.set(path, newer);
+
+    await expect(
+      service.apply(plan, new Map([[candidate.candidateId, corrected]])),
+    ).rejects.toMatchObject({
+      code: 'stale-plan',
+      path,
+    });
+
+    expect(await vault.read(path)).toBe(newer);
+    const backupPath = '任务/任务备份/2026-07-15T06-00-00-000Z/任务/旧日记.md';
+    expect(await vault.read(backupPath)).toBe(newer);
+  });
 });

@@ -13,9 +13,14 @@ import {
 
 export type { MigrationCandidate } from './legacy-task-candidates';
 
+export interface MigrationFileSnapshot {
+  readonly source: string;
+}
+
 export interface MigrationPlan {
   files: Map<string, MigrationCandidate[]>;
   failures: Map<string, string>;
+  sourceSnapshots: ReadonlyMap<string, MigrationFileSnapshot>;
   createdAt: string;
 }
 
@@ -97,15 +102,17 @@ export class MigrationService {
 
     const files = new Map<string, MigrationCandidate[]>();
     const failures = new Map<string, string>();
+    const sourceSnapshots = new Map<string, MigrationFileSnapshot>();
     for (const path of selected.values()) {
       try {
         const source = await this.vault.read(path);
         files.set(path, extractLegacyCandidates(path, source, this.makeId));
+        sourceSnapshots.set(path, { source });
       } catch (error) {
         failures.set(path, error instanceof Error ? error.message : String(error));
       }
     }
-    return { files, failures, createdAt: this.now() };
+    return { files, failures, sourceSnapshots, createdAt: this.now() };
   }
 
   async apply(plan: MigrationPlan, selections: MigrationSelections): Promise<void> {
@@ -137,7 +144,13 @@ export class MigrationService {
       }
     }
     for (const [path, candidates, selected] of selectedFiles) {
-      await this.applyFile(path, candidates, selected, plan.createdAt);
+      await this.applyFile(
+        path,
+        candidates,
+        selected,
+        plan.sourceSnapshots.get(path),
+        plan.createdAt,
+      );
     }
   }
 
@@ -145,6 +158,7 @@ export class MigrationService {
     path: string,
     allCandidates: MigrationCandidate[],
     selected: SelectedCandidate[],
+    previewSnapshot: MigrationFileSnapshot | undefined,
     createdAt: string,
   ): Promise<void> {
     const before = await this.vault.read(path);
@@ -153,6 +167,10 @@ export class MigrationService {
       await this.vault.create(backupPath, before);
     } catch (error) {
       throw new MigrationError('backup-failed', '创建迁移备份失败。', path, error);
+    }
+
+    if (!previewSnapshot || before !== previewSnapshot.source) {
+      throw new MigrationError('stale-plan', '源文档已变化，请重新预览。', path);
     }
 
     let writeCompleted = false;

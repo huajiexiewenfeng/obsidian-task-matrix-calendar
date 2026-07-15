@@ -1,7 +1,7 @@
 # Obsidian 任务中心视觉与旧任务导入重设计 V2
 
 **日期：** 2026-07-15  
-**仓库：** `D:/ai-discovery/obsidian-task-matrix-calendar`  
+**仓库：** `<workspace>/obsidian-task-matrix-calendar`
 **状态：** 用户已确认设计，等待书面规范复核  
 **关联规范：** `2026-07-15-obsidian-task-center-interaction-import-redesign.md`
 

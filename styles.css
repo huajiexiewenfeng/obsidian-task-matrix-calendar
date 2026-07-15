@@ -484,6 +484,24 @@
   border-radius: var(--radius-m);
 }
 
+.tmc-import-file-group {
+  display: grid;
+  gap: 12px;
+}
+
+.tmc-import-file-group > h3 {
+  margin: 0;
+}
+
+.tmc-import-candidate-correction > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tmc-import-candidate-correction[open] > summary {
+  margin-bottom: 10px;
+}
+
 .tmc-import-evidence {
   display: grid;
   gap: 6px;

@@ -2,10 +2,11 @@ import { Modal, Notice, type App } from 'obsidian';
 import { normalizeDateInput } from '../domain/dates';
 import { validateTaskDraft } from '../domain/rules';
 import type { TaskNode } from '../domain/task';
-import type {
-  MigrationCandidate,
-  MigrationPlan,
-  MigrationService,
+import {
+  MigrationError,
+  type MigrationCandidate,
+  type MigrationPlan,
+  type MigrationService,
 } from '../services/migration-service';
 import { renderLegacyCandidateEditor } from './legacy-import-candidate-editor';
 
@@ -32,6 +33,11 @@ function cloneTask(task: TaskNode): TaskNode {
 
 function backupTimestamp(value: string): string {
   return value.replace(/[:.]/g, '-');
+}
+
+function migrationErrorMessage(error: unknown): string {
+  if (error instanceof MigrationError) return `${error.path}：${error.message}`;
+  return error instanceof Error ? error.message : String(error);
 }
 
 function button(action: string, label: string): HTMLButtonElement {
@@ -185,7 +191,7 @@ export class LegacyImportWizard extends Modal {
       this.candidateErrors.clear();
       this.step = 'review';
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : String(error);
+      this.errorMessage = migrationErrorMessage(error);
     } finally {
       this.loading = false;
       this.render();
@@ -202,30 +208,56 @@ export class LegacyImportWizard extends Modal {
     this.contentEl.append(heading, description);
 
     this.renderFailures(review);
-    for (const candidate of this.currentCandidates()) {
-      const corrected = this.corrections.get(candidate.candidateId)
-        ?? cloneTask(candidate.proposed);
-      review.append(renderLegacyCandidateEditor({
-        candidate,
-        corrected,
-        selected: this.selectedCandidates.has(candidate.candidateId),
-        disabled: this.pending,
-        error: this.candidateErrors.get(candidate.candidateId),
-        onSelected: (selected) => {
-          if (this.pending) return;
-          if (selected) this.selectedCandidates.add(candidate.candidateId);
-          else {
-            this.selectedCandidates.delete(candidate.candidateId);
-            this.candidateErrors.delete(candidate.candidateId);
-          }
-          this.updateReviewContinue();
-        },
-        onChanged: (task) => {
-          if (this.pending) return;
-          this.corrections.set(candidate.candidateId, cloneTask(task));
-          this.clearCandidateError(candidate.candidateId);
-        },
-      }));
+    for (const path of this.selectedFiles) {
+      const candidates = this.plan?.files.get(path) ?? [];
+      const group = document.createElement('section');
+      group.className = 'tmc-import-file-group';
+      group.dataset.importFileGroup = '';
+      group.dataset.filePath = path;
+      const groupHeading = document.createElement('h3');
+      groupHeading.dataset.fileGroupHeader = '';
+      group.append(groupHeading);
+      this.updateFileGroupHeading(groupHeading, path, candidates);
+
+      const failure = this.plan?.failures.get(path);
+      if (failure) {
+        const evidence = document.createElement('p');
+        evidence.className = 'tmc-import-warning';
+        evidence.textContent = `读取失败：${failure}`;
+        group.append(evidence);
+      } else if (candidates.length === 0) {
+        const empty = document.createElement('p');
+        empty.textContent = '这个文件没有发现旧任务候选。';
+        group.append(empty);
+      }
+
+      for (const candidate of candidates) {
+        const corrected = this.corrections.get(candidate.candidateId)
+          ?? cloneTask(candidate.proposed);
+        group.append(renderLegacyCandidateEditor({
+          candidate,
+          corrected,
+          selected: this.selectedCandidates.has(candidate.candidateId),
+          disabled: this.pending,
+          error: this.candidateErrors.get(candidate.candidateId),
+          onSelected: (selected) => {
+            if (this.pending) return;
+            if (selected) this.selectedCandidates.add(candidate.candidateId);
+            else {
+              this.selectedCandidates.delete(candidate.candidateId);
+              this.candidateErrors.delete(candidate.candidateId);
+            }
+            this.updateFileGroupHeading(groupHeading, path, candidates);
+            this.updateReviewContinue();
+          },
+          onChanged: (task) => {
+            if (this.pending) return;
+            this.corrections.set(candidate.candidateId, cloneTask(task));
+            this.clearCandidateError(candidate.candidateId);
+          },
+        }));
+      }
+      review.append(group);
     }
     if (this.currentCandidates().length === 0 && this.plan?.failures.size === 0) {
       const empty = document.createElement('p');
@@ -276,22 +308,36 @@ export class LegacyImportWizard extends Modal {
     count.textContent = `将导入 ${selected.length} 个候选：复选框 ${checkboxCount} 个，手动选中普通列表 ${listCount} 个。`;
     summary.append(count);
 
-    const byPath = new Map<string, number>();
-    for (const candidate of selected) {
-      byPath.set(candidate.sourcePath, (byPath.get(candidate.sourcePath) ?? 0) + 1);
-    }
     const timestamp = backupTimestamp(this.plan?.createdAt ?? '');
     const backupRoot = typeof this.backupRoot === 'function'
       ? this.backupRoot()
       : this.backupRoot;
-    for (const [path, candidateCount] of byPath) {
+    for (const path of this.selectedFiles) {
+      const candidates = this.plan?.files.get(path) ?? [];
+      const candidateCount = candidates.filter(
+        (candidate) => this.selectedCandidates.has(candidate.candidateId),
+      ).length;
       const file = document.createElement('div');
+      file.dataset.confirmFile = '';
       file.dataset.filePath = path;
       const source = document.createElement('strong');
-      source.textContent = `${path} · ${candidateCount} 个`;
-      const backup = document.createElement('div');
-      backup.textContent = `备份副本：${backupRoot}/${timestamp}/${path}`;
-      file.append(source, backup);
+      source.textContent = `${path} · ${candidateCount} / ${candidates.length} 个`;
+      file.append(source);
+      const failure = this.plan?.failures.get(path);
+      if (failure) {
+        const evidence = document.createElement('div');
+        evidence.className = 'tmc-import-warning';
+        evidence.textContent = `读取失败：${failure}`;
+        file.append(evidence);
+      } else if (candidateCount > 0) {
+        const backup = document.createElement('div');
+        backup.textContent = `备份副本：${backupRoot}/${timestamp}/${path}`;
+        file.append(backup);
+      } else {
+        const unchanged = document.createElement('div');
+        unchanged.textContent = '未选择候选，不会写入或创建备份。';
+        file.append(unchanged);
+      }
       summary.append(file);
     }
     const warning = document.createElement('p');
@@ -391,7 +437,7 @@ export class LegacyImportWizard extends Modal {
       new Notice(`已导入 ${selections.size} 个旧任务。`);
       this.close();
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : String(error);
+      this.errorMessage = migrationErrorMessage(error);
       this.showStatus('');
       this.showError(this.errorMessage);
     } finally {
@@ -409,6 +455,17 @@ export class LegacyImportWizard extends Modal {
     return this.currentCandidates().filter(
       (candidate) => this.selectedCandidates.has(candidate.candidateId),
     );
+  }
+
+  private updateFileGroupHeading(
+    heading: HTMLElement,
+    path: string,
+    candidates: readonly MigrationCandidate[],
+  ): void {
+    const selectedCount = candidates.filter(
+      (candidate) => this.selectedCandidates.has(candidate.candidateId),
+    ).length;
+    heading.textContent = `${path} · ${selectedCount} / ${candidates.length} 个`;
   }
 
   private renderFailures(host: HTMLElement): void {

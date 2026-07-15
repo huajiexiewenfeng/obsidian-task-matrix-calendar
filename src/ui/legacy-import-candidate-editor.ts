@@ -102,6 +102,10 @@ export function renderLegacyCandidateEditor(
   selectionText.textContent = '导入这个候选';
   selectionLabel.append(selection, selectionText);
 
+  const visibleTitle = document.createElement('strong');
+  visibleTitle.dataset.candidateTitle = '';
+  visibleTitle.textContent = options.corrected.title;
+
   const evidence = document.createElement('div');
   evidence.className = 'tmc-import-evidence';
   const location = document.createElement('div');
@@ -121,7 +125,10 @@ export function renderLegacyCandidateEditor(
     control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
     update: (task: TaskNode, value: string) => TaskNode,
   ): void => {
-    const changed = () => emit((task) => update(task, control.value));
+    const changed = () => {
+      emit((task) => update(task, control.value));
+      if (control.name === 'title') visibleTitle.textContent = current.title;
+    };
     control.addEventListener('input', changed);
     control.addEventListener('change', changed);
   };
@@ -172,6 +179,12 @@ export function renderLegacyCandidateEditor(
     control.disabled = options.disabled;
   });
 
-  row.append(selectionLabel, evidence, fields);
+  const disclosure = document.createElement('details');
+  disclosure.className = 'tmc-import-candidate-correction';
+  const disclosureLabel = document.createElement('summary');
+  disclosureLabel.textContent = '展开完整修正表单';
+  disclosure.append(disclosureLabel, fields);
+
+  row.append(selectionLabel, visibleTitle, evidence, disclosure);
   return row;
 }

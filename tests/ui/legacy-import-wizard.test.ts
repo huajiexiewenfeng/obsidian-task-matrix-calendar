@@ -2,7 +2,10 @@
 import { Notice, type App } from 'obsidian';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { makeTask } from '../../src/domain/task';
-import type { MigrationPlan } from '../../src/services/migration-service';
+import {
+  MigrationError,
+  type MigrationPlan,
+} from '../../src/services/migration-service';
 import {
   LegacyImportWizard,
   type LegacyImportWizardServicePort,
@@ -10,10 +13,12 @@ import {
 
 const sourcePath = '任务/旧.md';
 const otherPath = '任务/另一个.md';
+const failedPath = '任务/无法读取.md';
 
 const plan: MigrationPlan = {
   createdAt: '2026-07-15T00:00:00.000Z',
   failures: new Map(),
+  sourceSnapshots: new Map(),
   files: new Map([[sourcePath, [
     {
       candidateId: 'checkbox',
@@ -75,6 +80,18 @@ function row(wizard: LegacyImportWizard, id: string): HTMLElement {
 
 function candidateSelection(wizard: LegacyImportWizard, id: string): HTMLInputElement {
   return row(wizard, id).querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+}
+
+function reviewFileGroup(wizard: LegacyImportWizard, path: string): HTMLElement {
+  return Array.from(
+    wizard.contentEl.querySelectorAll<HTMLElement>('[data-import-file-group]'),
+  ).find((group) => group.dataset.filePath === path)!;
+}
+
+function confirmFile(wizard: LegacyImportWizard, path: string): HTMLElement {
+  return Array.from(
+    wizard.contentEl.querySelectorAll<HTMLElement>('[data-confirm-file]'),
+  ).find((file) => file.dataset.filePath === path)!;
 }
 
 function field<T extends HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
@@ -189,6 +206,53 @@ describe('LegacyImportWizard', () => {
     expect(row(wizard, 'list').textContent).toContain('第 6 行');
     expect(row(wizard, 'list').textContent).toContain('- 手动候选');
     expect(row(wizard, 'list').textContent).toContain('普通列表，仅作为候选');
+  });
+
+  it('groups every previewed file with a live selection count and keeps correction forms collapsed', async () => {
+    const otherCandidate = {
+      ...plan.files.get(sourcePath)![1],
+      candidateId: 'other-list',
+      sourcePath: otherPath,
+      proposed: makeTask({
+        id: 'task-B1',
+        title: '另一个候选',
+        plannedDate: '2026-07-16',
+      }),
+    };
+    const groupedPlan: MigrationPlan = {
+      ...plan,
+      files: new Map([
+        [sourcePath, plan.files.get(sourcePath)!],
+        [otherPath, [otherCandidate]],
+      ]),
+    };
+    const wizard = new LegacyImportWizard(
+      {} as App,
+      service({ preview: vi.fn().mockResolvedValue(groupedPlan) }),
+      '备份/旧任务导入',
+    );
+    wizard.openWizard();
+    fileSelection(wizard, sourcePath).click();
+    fileSelection(wizard, otherPath).click();
+    action(wizard, 'continue').click();
+    await flushPromises();
+
+    expect(reviewFileGroup(wizard, sourcePath).textContent).toContain(`${sourcePath} · 1 / 2`);
+    expect(reviewFileGroup(wizard, otherPath).textContent).toContain(`${otherPath} · 0 / 1`);
+    const editor = row(wizard, 'other-list');
+    expect(editor.textContent).toContain('另一个候选');
+    expect(editor.textContent).toContain('第 6 行');
+    expect(editor.textContent).toContain('- 手动候选');
+    expect(editor.textContent).toContain('普通列表，仅作为候选');
+    const disclosure = editor.querySelector<HTMLDetailsElement>('details')!;
+    expect(disclosure.open).toBe(false);
+    expect(disclosure.contains(field(wizard, 'other-list', 'title'))).toBe(true);
+
+    candidateSelection(wizard, 'other-list').click();
+
+    expect(reviewFileGroup(wizard, otherPath).textContent).toContain(`${otherPath} · 1 / 1`);
+    expect(otherCandidate.originalText).toBe('- 手动候选');
+    expect(otherCandidate.proposed.title).toBe('另一个候选');
   });
 
   it('shows source evidence for files that could not be previewed', async () => {
@@ -324,6 +388,37 @@ describe('LegacyImportWizard', () => {
     expect(migrationService.apply).not.toHaveBeenCalled();
   });
 
+  it('confirms every explicitly selected file including zero selections and read failures', async () => {
+    const completePlan: MigrationPlan = {
+      ...plan,
+      files: new Map([
+        [sourcePath, plan.files.get(sourcePath)!],
+        [otherPath, []],
+      ]),
+      failures: new Map([[failedPath, '读取失败：文件已移动']]),
+    };
+    const wizard = new LegacyImportWizard(
+      {} as App,
+      service({
+        listEligibleFiles: vi.fn(() => [sourcePath, otherPath, failedPath]),
+        preview: vi.fn().mockResolvedValue(completePlan),
+      }),
+      '备份/旧任务导入',
+    );
+    wizard.openWizard();
+    fileSelection(wizard, sourcePath).click();
+    fileSelection(wizard, otherPath).click();
+    fileSelection(wizard, failedPath).click();
+    action(wizard, 'continue').click();
+    await flushPromises();
+    action(wizard, 'continue').click();
+
+    expect(confirmFile(wizard, sourcePath).textContent).toContain(`${sourcePath} · 1 / 2`);
+    expect(confirmFile(wizard, otherPath).textContent).toContain(`${otherPath} · 0 / 0`);
+    expect(confirmFile(wizard, failedPath).textContent).toContain(`${failedPath} · 0 / 0`);
+    expect(confirmFile(wizard, failedPath).textContent).toContain('读取失败：文件已移动');
+  });
+
   it('uses the current backup root when settings change before confirmation', async () => {
     let backupRoot = '备份/初始目录';
     const wizard = new LegacyImportWizard(
@@ -427,6 +522,48 @@ describe('LegacyImportWizard', () => {
     expect(action(wizard, 'confirm').disabled).toBe(false);
     expect(action(wizard, 'back').disabled).toBe(false);
     expect(action(wizard, 'cancel').disabled).toBe(false);
+  });
+
+  it('shows the failed source path and message for a MigrationError in a multi-file apply', async () => {
+    const otherCandidate = {
+      ...plan.files.get(sourcePath)![0],
+      candidateId: 'other-checkbox',
+      sourcePath: otherPath,
+      proposed: makeTask({
+        id: 'task-B2',
+        title: '另一个自动候选',
+        plannedDate: '2026-07-16',
+      }),
+    };
+    const multiFilePlan: MigrationPlan = {
+      ...plan,
+      files: new Map([
+        [sourcePath, plan.files.get(sourcePath)!],
+        [otherPath, [otherCandidate]],
+      ]),
+    };
+    const migrationService = service({
+      preview: vi.fn().mockResolvedValue(multiFilePlan),
+      apply: vi.fn().mockRejectedValue(new MigrationError(
+        'verification-failed',
+        '迁移写入复核失败。',
+        otherPath,
+      )),
+    });
+    const wizard = new LegacyImportWizard({} as App, migrationService, '备份/旧任务导入');
+    wizard.openWizard();
+    fileSelection(wizard, sourcePath).click();
+    fileSelection(wizard, otherPath).click();
+    action(wizard, 'continue').click();
+    await flushPromises();
+    action(wizard, 'continue').click();
+    action(wizard, 'confirm').click();
+    await flushPromises();
+
+    const error = wizard.contentEl.querySelector<HTMLElement>('[data-import-error]');
+    expect(error?.textContent).toContain(otherPath);
+    expect(error?.textContent).toContain('迁移写入复核失败。');
+    expect(migrationService.apply).toHaveBeenCalledTimes(1);
   });
 
   it('ignores reentry during pending apply and can retry after the apply rejects', async () => {

@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-15  
 **Status:** User-approved design, pending written-spec review  
-**Repository:** `D:/ai-discovery/obsidian-task-matrix-calendar`
+**Repository:** `<workspace>/obsidian-task-matrix-calendar`
 
 ## 1. Problem Statement
 

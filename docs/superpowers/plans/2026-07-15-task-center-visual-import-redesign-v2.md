@@ -1181,7 +1181,7 @@ Expected: the installer reports the target plugin path and creates a timestamped
 Compare SHA-256 for the three repository artifacts and installed artifacts:
 
 ```powershell
-$repo='D:\ai-discovery\obsidian-task-matrix-calendar'
+$repo='C:\path\to\obsidian-task-matrix-calendar'
 $installed='C:\path\to\Main Vault\.obsidian\plugins\task-matrix-calendar'
 foreach($name in 'main.js','manifest.json','styles.css') {
   $source=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $repo $name)).Hash
