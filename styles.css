@@ -273,6 +273,54 @@
   gap: 10px;
 }
 
+.tmc-task-form-modal {
+  color: var(--text-normal);
+  background: var(--background-primary);
+}
+
+.tmc-task-form-modal form {
+  max-height: min(72vh, 46rem);
+  overflow-y: auto;
+  padding-inline: 1px;
+}
+
+.tmc-form-section,
+.tmc-task-form-modal [data-section="metadata"] {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.tmc-form-section > h3 {
+  margin: 0;
+  color: var(--text-normal);
+}
+
+.tmc-task-form-modal [data-section="metadata"] > summary {
+  color: var(--text-normal);
+  cursor: pointer;
+  font-weight: var(--font-semibold);
+}
+
+.tmc-task-form-modal [data-role="form-actions"] {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0 2px;
+  background: var(--background-primary);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.tmc-task-form-modal [data-role="form-actions"] .mod-cta {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+}
+
 .tmc-task-form label,
 .tmc-task-form-modal form label {
   display: grid;

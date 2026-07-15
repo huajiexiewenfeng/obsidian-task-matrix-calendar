@@ -64,6 +64,30 @@ afterEach(() => {
 });
 
 describe('TaskFormModal', () => {
+  it('renders grouped content, execution, collapsed metadata, and fixed actions', () => {
+    const modal = new TaskFormModal({} as App, service(), () => '2026-07-15');
+    modal.openCreate();
+
+    expect(modal.contentEl.querySelector('[data-section="content"]')).not.toBeNull();
+    expect(modal.contentEl.querySelector('[data-section="execution"]')).not.toBeNull();
+    const metadata = modal.contentEl.querySelector<HTMLDetailsElement>('[data-section="metadata"]')!;
+    expect(metadata.open).toBe(false);
+    expect(modal.contentEl.querySelector('[data-role="form-actions"]')).not.toBeNull();
+    expect(input(modal, 'plannedDate').value).toBe('2026-07-15');
+    expect(select(modal, 'status').value).toBe('todo');
+    expect(select(modal, 'quadrant').value).toBe('unclassified');
+  });
+
+  it('cancels without writing', () => {
+    const taskService = service();
+    const modal = new TaskFormModal({} as App, taskService, () => '2026-07-15');
+    modal.openCreate();
+    modal.contentEl.querySelector<HTMLButtonElement>('[data-action="cancel"]')!.click();
+    expect(taskService.create).not.toHaveBeenCalled();
+    expect(taskService.update).not.toHaveBeenCalled();
+    expect(modal.contentEl.isConnected).toBe(false);
+  });
+
   it('opens create mode with all fields and create defaults', () => {
     const modal = new TaskFormModal({} as App, service(), () => '2026-07-15');
 
@@ -148,19 +172,25 @@ describe('TaskFormModal', () => {
     expect(modal.contentEl.isConnected).toBe(false);
   });
 
-  it('submits empty edit dates as explicit clears', async () => {
+  it('submits empty edit values as explicit clears', async () => {
     const update = vi.fn().mockResolvedValue(undefined);
     const modal = new TaskFormModal({} as App, service({ update }), () => '2026-07-15');
     modal.openEdit(indexedTask());
+    textarea(modal, 'details').value = '';
     input(modal, 'plannedDate').value = '';
     input(modal, 'dueDate').value = '';
+    input(modal, 'project').value = '';
+    input(modal, 'tags').value = '';
 
     save(modal).click();
     await flushPromises();
 
     expect(update).toHaveBeenCalledWith('task-A1', expect.objectContaining({
+      details: '',
       plannedDate: '',
       dueDate: '',
+      project: '',
+      tags: [],
     }));
   });
 

@@ -66,6 +66,16 @@ function field(label: string, control: HTMLElement): HTMLLabelElement {
   return wrapper;
 }
 
+function section(name: string, title: string, ...children: HTMLElement[]): HTMLElement {
+  const container = document.createElement('section');
+  container.dataset.section = name;
+  container.className = 'tmc-form-section';
+  const heading = document.createElement('h3');
+  heading.textContent = title;
+  container.append(heading, ...children);
+  return container;
+}
+
 export class TaskFormModal extends Modal {
   private mode: FormMode = { kind: 'create' };
 
@@ -117,21 +127,38 @@ export class TaskFormModal extends Modal {
     const tags = input('tags', task?.tags.join(', ') ?? '');
 
     form.append(
-      field('任务标题', title),
-      field('详情', details),
-      field('状态', status),
-      field('四象限', quadrant),
-      field('开始日期', plannedDate),
-      field('截止日期', dueDate),
-      field('项目', project),
-      field('标签', tags),
+      section('content', '任务内容', field('任务标题', title), field('详情', details)),
+      section(
+        'execution',
+        '执行安排',
+        field('状态', status),
+        field('四象限', quadrant),
+        field('开始日期', plannedDate),
+        field('截止日期', dueDate),
+      ),
     );
+
+    const metadata = document.createElement('details');
+    metadata.dataset.section = 'metadata';
+    const summary = document.createElement('summary');
+    summary.textContent = '项目与标签';
+    metadata.append(summary, field('项目', project), field('标签', tags));
+    form.append(metadata);
 
     const save = document.createElement('button');
     save.type = 'submit';
     save.dataset.action = 'save';
     save.textContent = '保存';
-    form.append(save);
+    const actions = document.createElement('footer');
+    actions.dataset.role = 'form-actions';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.dataset.action = 'cancel';
+    cancel.textContent = '取消';
+    cancel.addEventListener('click', () => this.close());
+    save.classList.add('mod-cta');
+    actions.append(cancel, save);
+    form.append(actions);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       if (!save.disabled) void this.submit(form, save);
