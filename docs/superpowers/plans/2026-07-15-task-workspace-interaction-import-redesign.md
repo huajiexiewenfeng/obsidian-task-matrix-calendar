@@ -32,7 +32,7 @@
 - `src/services/task-service.ts`: accept and normalize details on create/update.
 - `src/ui/task-form-modal.ts`: own create/edit form DOM, validation, pending state, and error presentation.
 - `src/ui/task-filter-state.ts`: pure UI-filter state, option derivation, and `TaskFilters` mapping.
-- `src/ui/calendar-view.ts`: retain the month model but replace the standalone `ItemView` with a reusable calendar-panel renderer.
+- `src/ui/calendar-view.ts`: retain the month model and compatibility `ItemView` while adding a reusable calendar-panel renderer; Task 9 removes the wrapper after plugin routing changes.
 - `src/ui/task-workspace-view.ts`: compose header, tabs, filters, matrix, calendar panel, shared modal, and import action.
 - `src/ui/task-card.ts`: include a short details preview while retaining status actions.
 - `src/index/managed-path.ts`: one path-eligibility predicate shared by indexing and migration.
@@ -468,7 +468,7 @@ npx vitest run tests/ui/calendar-view.test.ts
 
 Expected: FAIL because the current calendar is a standalone `ItemView` and lacks selected/unscheduled panels.
 
-- [ ] **Step 3: Replace `CalendarView` with a panel renderer**
+- [ ] **Step 3: Add a panel renderer while preserving the compatibility `CalendarView`**
 
 Keep the month model. Add:
 
@@ -486,6 +486,8 @@ export interface CalendarPanelOptions {
 ```
 
 Every task button sets `data-calendar-task-id`, calls `onEdit`, and is draggable. The unscheduled list is exactly `tasks.filter(task => !task.plannedDate && !task.dueDate)`. A drop target calls only `onMove(taskId, day.date)`; it has no due-date callback.
+
+Keep the existing exported `CalendarView` as a thin compatibility wrapper around `renderCalendarPanel` until Task 9 changes `main.ts`. It must retain the current constructor and view type so the branch compiles and the installed plugin remains loadable after this task.
 
 - [ ] **Step 4: Run tests and commit**
 
@@ -505,10 +507,6 @@ git commit -m "feat: render linked calendar panel"
 - Create: `tests/ui/task-workspace-view.test.ts`
 - Modify: `src/ui/task-card.ts`
 - Modify: `tests/ui/task-card.test.ts`
-- Delete: `src/ui/task-matrix-view.ts`
-- Delete: `tests/ui/task-matrix-view.test.ts`
-- Delete: `src/ui/task-editor-drawer.ts`
-- Delete: `tests/ui/task-editor-drawer.test.ts`
 
 **Interfaces:**
 - Produces: `TASK_WORKSPACE_VIEW_TYPE = 'task-matrix-calendar-task-workspace'`.
@@ -575,17 +573,16 @@ if (task.details) {
 
 Use CSS line clamping later; keep full text in the DOM for accessibility and search.
 
-- [ ] **Step 5: Delete old standalone view files, run tests, and commit**
+- [ ] **Step 5: Keep old registered views until plugin routing changes, run tests, and commit**
 
 ```powershell
 npx vitest run tests/ui/task-workspace-view.test.ts tests/ui/task-card.test.ts tests/ui/calendar-view.test.ts
-rg -n "TaskMatrixView|TASK_MATRIX_VIEW_TYPE|TaskEditorDrawer|task-editor-drawer|new CalendarView" src tests
 ```
 
-Expected: tests PASS and the removed view classes have no references.
+Expected: tests PASS. The old matrix view, drawer, and calendar wrapper remain unchanged until Task 9 switches `main.ts` to the unified workspace.
 
 ```powershell
-git add src/ui/task-workspace-view.ts tests/ui/task-workspace-view.test.ts src/ui/task-card.ts tests/ui/task-card.test.ts src/ui/task-matrix-view.ts tests/ui/task-matrix-view.test.ts src/ui/task-editor-drawer.ts tests/ui/task-editor-drawer.test.ts
+git add src/ui/task-workspace-view.ts tests/ui/task-workspace-view.test.ts src/ui/task-card.ts tests/ui/task-card.test.ts
 git commit -m "feat: unify task and calendar workspace"
 ```
 
@@ -778,6 +775,12 @@ git commit -m "feat: add editable legacy import preview"
 - Modify: `src/main.ts:25-195`
 - Modify: `tests/plugin-lifecycle.test.ts`
 - Modify: `tests/mocks/obsidian.ts`
+- Modify: `src/ui/calendar-view.ts`
+- Modify: `tests/ui/calendar-view.test.ts`
+- Delete: `src/ui/task-matrix-view.ts`
+- Delete: `tests/ui/task-matrix-view.test.ts`
+- Delete: `src/ui/task-editor-drawer.ts`
+- Delete: `tests/ui/task-editor-drawer.test.ts`
 
 **Interfaces:**
 - Consumes: `TASK_WORKSPACE_VIEW_TYPE`, `TaskWorkspaceView`, `TaskWorkspaceMode`.
@@ -837,6 +840,14 @@ async activateTaskWorkspace(mode: TaskWorkspaceMode): Promise<void> {
 
 Ribbon opens task mode. The command-palette migration action calls zero-argument `migrationModal.preview()`.
 
+After `main.ts` no longer imports the old views, remove the compatibility `CalendarView`/`CALENDAR_VIEW_TYPE` wrapper while retaining `buildMonthModel` and `renderCalendarPanel`. Delete the old matrix view, editor drawer, and their tests in the same commit. Verify no production references remain:
+
+```powershell
+rg -n "TaskMatrixView|TASK_MATRIX_VIEW_TYPE|TaskEditorDrawer|task-editor-drawer|CALENDAR_VIEW_TYPE|new CalendarView" src tests
+```
+
+Expected: no matches.
+
 - [ ] **Step 4: Run lifecycle and all UI tests, then commit**
 
 ```powershell
@@ -846,7 +857,7 @@ npx vitest run tests/plugin-lifecycle.test.ts tests/ui
 Expected: PASS.
 
 ```powershell
-git add src/main.ts tests/plugin-lifecycle.test.ts tests/mocks/obsidian.ts
+git add src/main.ts tests/plugin-lifecycle.test.ts tests/mocks/obsidian.ts src/ui/calendar-view.ts tests/ui/calendar-view.test.ts src/ui/task-matrix-view.ts tests/ui/task-matrix-view.test.ts src/ui/task-editor-drawer.ts tests/ui/task-editor-drawer.test.ts
 git commit -m "feat: route task commands through one workspace"
 ```
 
