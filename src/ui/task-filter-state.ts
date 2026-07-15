@@ -24,6 +24,14 @@ export const DEFAULT_FILTER_STATE: TaskWorkspaceFilterState = {
   sourcePath: '*',
 };
 
+export function hasActiveFilters(state: TaskWorkspaceFilterState): boolean {
+  return state.query.trim() !== ''
+    || state.project !== DEFAULT_FILTER_STATE.project
+    || state.status !== DEFAULT_FILTER_STATE.status
+    || state.risk !== DEFAULT_FILTER_STATE.risk
+    || state.sourcePath !== DEFAULT_FILTER_STATE.sourcePath;
+}
+
 export function toTaskFilters(state: TaskWorkspaceFilterState): TaskFilters {
   return {
     ...(state.query.trim() ? { query: state.query } : {}),

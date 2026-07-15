@@ -9,11 +9,17 @@ import {
 } from './calendar-view';
 import { renderTaskCard, type TaskCardActions } from './task-card';
 import {
+  renderTaskFilterBar,
+  type FilterName,
+  type SearchChange,
+} from './task-filter-bar';
+import {
   DEFAULT_FILTER_STATE,
   deriveFilterOptions,
   toTaskFilters,
   type TaskWorkspaceFilterState,
 } from './task-filter-state';
+import { renderTaskWorkspaceHeader } from './task-workspace-header';
 
 export const TASK_WORKSPACE_VIEW_TYPE = 'task-matrix-calendar-task-workspace';
 
@@ -45,23 +51,6 @@ const QUADRANTS: Array<[Exclude<TaskQuadrant, 'unclassified'>, string]> = [
   ['important-not-urgent', '重要不紧急'],
   ['not-important-urgent', '不重要但紧急'],
   ['not-important-not-urgent', '不重要不紧急'],
-];
-
-const STATUS_OPTIONS: Array<[TaskWorkspaceFilterState['status'], string]> = [
-  ['active', '活动'],
-  ['*', '全部'],
-  ['todo', '待办'],
-  ['in-progress', '进行中'],
-  ['paused', '暂停'],
-  ['done', '已完成'],
-];
-
-const RISK_OPTIONS: Array<[TaskWorkspaceFilterState['risk'], string]> = [
-  ['*', '全部'],
-  ['overdue', '已逾期'],
-  ['due-today', '今天截止'],
-  ['upcoming', '即将截止'],
-  ['none', '无风险'],
 ];
 
 export class TaskWorkspaceView extends ItemView {
@@ -116,154 +105,68 @@ export class TaskWorkspaceView extends ItemView {
   private render(): void {
     this.containerEl.replaceChildren();
     this.containerEl.classList.add('task-matrix-calendar', 'tmc-task-workspace');
-    this.containerEl.append(this.renderHeader(), this.renderFilters());
+    this.containerEl.append(
+      renderTaskWorkspaceHeader({
+        mode: this.mode,
+        importing: this.importing,
+        onCreate: () => this.form.openCreate(),
+        onImport: () => this.startImport(),
+        onModeChange: (mode) => this.setMode(mode),
+      }),
+      renderTaskFilterBar({
+        state: this.filters,
+        choices: deriveFilterOptions(this.index.snapshot().tasks),
+        onSearch: (change) => this.changeSearch(change),
+        onFilterChange: (name, value) => this.changeFilter(name, value),
+        onClear: () => {
+          this.filters = { ...DEFAULT_FILTER_STATE };
+          this.render();
+        },
+      }),
+    );
 
     const content = document.createElement('main');
     content.dataset.workspaceMode = this.mode;
-    if (this.mode === 'tasks') {
-      this.renderTaskMatrix(content);
-    } else {
-      this.renderCalendar(content);
-    }
+    if (this.mode === 'tasks') this.renderTaskMatrix(content);
+    else this.renderCalendar(content);
     this.containerEl.append(content);
   }
 
-  private renderHeader(): HTMLElement {
-    const header = document.createElement('header');
-    header.className = 'tmc-view-header';
-    const heading = document.createElement('h2');
-    heading.textContent = '任务中心';
-
-    const create = document.createElement('button');
-    create.type = 'button';
-    create.dataset.action = 'new-task';
-    create.textContent = '+ 新任务';
-    create.addEventListener('click', () => this.form.openCreate());
-
-    const importButton = document.createElement('button');
-    importButton.type = 'button';
-    importButton.dataset.action = 'import-legacy';
-    importButton.textContent = '导入旧任务';
-    importButton.disabled = this.importing;
-    importButton.addEventListener('click', () => {
-      if (this.importing) return;
-      this.importing = true;
-      importButton.disabled = true;
-      void this.run(this.importAction).finally(() => {
-        this.importing = false;
-        this.render();
-      });
-    });
-
-    const modes = document.createElement('div');
-    modes.className = 'tmc-workspace-modes';
-    modes.append(
-      this.modeButton('tasks', '任务'),
-      this.modeButton('calendar', '日历'),
+  private startImport(): void {
+    if (this.importing) return;
+    this.importing = true;
+    const importButton = this.containerEl.querySelector<HTMLButtonElement>(
+      '[data-action="import-legacy"]',
     );
-    header.append(heading, create, importButton, modes);
-    return header;
-  }
-
-  private modeButton(mode: TaskWorkspaceMode, label: string): HTMLButtonElement {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.mode = mode;
-    button.textContent = label;
-    button.classList.toggle('is-active', this.mode === mode);
-    button.setAttribute('aria-pressed', String(this.mode === mode));
-    button.addEventListener('click', () => this.setMode(mode));
-    return button;
-  }
-
-  private renderFilters(): HTMLElement {
-    const toolbar = document.createElement('div');
-    toolbar.className = 'tmc-filters';
-    const search = document.createElement('input');
-    search.type = 'search';
-    search.dataset.filter = 'query';
-    search.placeholder = '搜索标题、详情、项目、标签……';
-    search.value = this.filters.query;
-    search.addEventListener('input', () => {
-      const restoreFocus = document.activeElement === search;
-      const selectionStart = search.selectionStart;
-      const selectionEnd = search.selectionEnd;
-      const selectionDirection = search.selectionDirection;
-      this.filters.query = search.value;
+    if (importButton) importButton.disabled = true;
+    void this.run(this.importAction).finally(() => {
+      this.importing = false;
       this.render();
-      if (restoreFocus) {
-        const replacement = this.containerEl.querySelector<HTMLInputElement>('[data-filter="query"]');
-        replacement?.focus();
-        if (selectionStart !== null && selectionEnd !== null) {
-          replacement?.setSelectionRange(
-            selectionStart,
-            selectionEnd,
-            selectionDirection ?? 'none',
-          );
-        }
-      }
     });
-    toolbar.append(this.filterField('搜索', search));
-
-    const options = deriveFilterOptions(this.index.snapshot().tasks);
-    toolbar.append(
-      this.filterField('项目', this.filterSelect(
-        'project',
-        this.filters.project,
-        [['*', '项目：全部'], ...options.projects.map((project) => [project, project] as [string, string])],
-        (value) => { this.filters.project = value; },
-      )),
-      this.filterField('状态', this.filterSelect(
-        'status',
-        this.filters.status,
-        STATUS_OPTIONS,
-        (value) => { this.filters.status = value as TaskWorkspaceFilterState['status']; },
-      )),
-      this.filterField('截止风险', this.filterSelect(
-        'risk',
-        this.filters.risk,
-        RISK_OPTIONS,
-        (value) => { this.filters.risk = value as TaskWorkspaceFilterState['risk']; },
-      )),
-      this.filterField('来源', this.filterSelect(
-        'source',
-        this.filters.sourcePath,
-        [['*', '来源：全部'], ...options.sourcePaths.map((path) => [path, path] as [string, string])],
-        (value) => { this.filters.sourcePath = value; },
-      )),
-    );
-    return toolbar;
   }
 
-  private filterField(caption: string, control: HTMLElement): HTMLLabelElement {
-    const label = document.createElement('label');
-    const text = document.createElement('span');
-    text.dataset.filterLabel = '';
-    text.textContent = caption;
-    label.append(text, control);
-    return label;
-  }
+  private changeSearch(change: SearchChange): void {
+    this.filters.query = change.query;
+    this.render();
+    if (!change.restoreFocus) return;
 
-  private filterSelect(
-    name: 'project' | 'status' | 'risk' | 'source',
-    value: string,
-    choices: ReadonlyArray<readonly [string, string]>,
-    update: (value: string) => void,
-  ): HTMLSelectElement {
-    const select = document.createElement('select');
-    select.dataset.filter = name;
-    for (const [choice, label] of choices) {
-      const option = document.createElement('option');
-      option.value = choice;
-      option.textContent = label;
-      option.selected = choice === value;
-      select.append(option);
+    const replacement = this.containerEl.querySelector<HTMLInputElement>('[data-filter="query"]');
+    replacement?.focus();
+    if (change.selectionStart !== null && change.selectionEnd !== null) {
+      replacement?.setSelectionRange(
+        change.selectionStart,
+        change.selectionEnd,
+        change.selectionDirection,
+      );
     }
-    select.addEventListener('change', () => {
-      update(select.value);
-      this.render();
-    });
-    return select;
+  }
+
+  private changeFilter(name: FilterName, value: string): void {
+    if (name === 'project') this.filters.project = value;
+    else if (name === 'status') this.filters.status = value as TaskWorkspaceFilterState['status'];
+    else if (name === 'risk') this.filters.risk = value as TaskWorkspaceFilterState['risk'];
+    else this.filters.sourcePath = value;
+    this.render();
   }
 
   private filteredTasks(): IndexedTask[] {

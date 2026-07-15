@@ -90,6 +90,22 @@ async function flushPromises(): Promise<void> {
 }
 
 describe('TaskWorkspaceView', () => {
+  it('composes the calm workspace chrome and clears active filters', async () => {
+    const { view } = setup();
+    await view.onOpen();
+
+    expect(view.containerEl.querySelector('.tmc-workspace-header h2')?.textContent)
+      .toBe('今天要推进什么？');
+    expect(view.containerEl.querySelector('.tmc-filter-bar [data-filter="query"]')).not.toBeNull();
+
+    changeFilter(view, 'project', 'Alpha');
+    view.containerEl.querySelector<HTMLButtonElement>('[data-action="clear-filters"]')!.click();
+
+    expect(view.containerEl.querySelector<HTMLSelectElement>('[data-filter="project"]')!.value)
+      .toBe('*');
+    expect(visibleTaskIds(view)).toEqual(['task-A1', 'task-A2', 'task-B1']);
+  });
+
   it('uses one workspace for task creation and editing', async () => {
     const { view, leaf, form } = setup();
     const originalContainer = view.containerEl;

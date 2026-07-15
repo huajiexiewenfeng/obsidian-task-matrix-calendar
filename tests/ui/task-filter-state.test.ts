@@ -3,6 +3,7 @@ import { makeTask, type IndexedTask } from '../../src/domain/task';
 import {
   DEFAULT_FILTER_STATE,
   deriveFilterOptions,
+  hasActiveFilters,
   toTaskFilters,
 } from '../../src/ui/task-filter-state';
 
@@ -58,6 +59,15 @@ describe('task filter state', () => {
       risk: '*',
       sourcePath: '*',
     })).toEqual({});
+  });
+
+  it('detects every individual departure from the default filter state', () => {
+    expect(hasActiveFilters(DEFAULT_FILTER_STATE)).toBe(false);
+    expect(hasActiveFilters({ ...DEFAULT_FILTER_STATE, query: '任务' })).toBe(true);
+    expect(hasActiveFilters({ ...DEFAULT_FILTER_STATE, project: 'Smarthub' })).toBe(true);
+    expect(hasActiveFilters({ ...DEFAULT_FILTER_STATE, status: '*' })).toBe(true);
+    expect(hasActiveFilters({ ...DEFAULT_FILTER_STATE, risk: 'overdue' })).toBe(true);
+    expect(hasActiveFilters({ ...DEFAULT_FILTER_STATE, sourcePath: '任务/a.md' })).toBe(true);
   });
 
   it('derives unique project and source options sorted for Chinese text', () => {
