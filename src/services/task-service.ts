@@ -203,7 +203,9 @@ export class TaskService {
 
   async changeQuadrant(id: string, quadrant: TaskQuadrant): Promise<void> {
     const indexed = this.required(id);
-    await this.persist(indexed, { ...indexed.task, quadrant });
+    const updated = { ...indexed.task, quadrant };
+    this.assertDraft(updated, id);
+    await this.persist(indexed, updated);
   }
 
   async changePlannedDate(id: string, plannedDate?: string): Promise<void> {

@@ -77,3 +77,21 @@ Scope: four Important final-review findings plus the Minor rejected-date test ga
 
 - No known functional blocker.
 - The production build updates local ignored build output only; the committed scope is source, tests, and this report.
+
+## Final Re-review Addendum: `changeQuadrant()` Invariant
+
+- Finding: `TaskService.changeQuadrant()` bypassed `validateTaskDraft()`, allowing `in-progress`, `paused`, and `done` tasks to become `unclassified` through a workspace drop.
+- RED: `npm.cmd test -- tests/services/task-service.test.ts tests/ui/task-workspace-view.test.ts`
+  - All three non-`todo` cases resolved successfully instead of rejecting with `classification-required`.
+  - The todo-to-unclassified allowance and existing workspace error containment were already GREEN.
+- Fix: `changeQuadrant()` now constructs the updated task, calls the shared `assertDraft(updated, id)` service path, and persists only after validation.
+- Service regressions prove:
+  - A classified `todo` task can move to `unclassified`.
+  - `in-progress`, `paused`, and `done` tasks reject the same change, retain their prior quadrant, and report the task ID.
+- Workspace regression proves an active-task drop into the unclassified inbox invokes the service, contains and displays the rejection through the existing `run()`/`Notice` path, and leaves the card in its classified section.
+- GREEN focused gate: 2 files, 30 tests passed.
+- Full suite: 28 files, 148 tests passed.
+- Coverage: statements 91.97%, branches 81.66%, functions 90.00%, lines 94.08%.
+- Lint: PASS.
+- Production build: PASS.
+- No external Vault install command was run.

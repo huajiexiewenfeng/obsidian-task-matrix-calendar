@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { WorkspaceLeaf } from 'obsidian';
+import { Notice, type WorkspaceLeaf } from 'obsidian';
 import { describe, expect, it, vi } from 'vitest';
 import { TaskIndex } from '../../src/index/task-index';
 import { parseTaskFile } from '../../src/markdown/task-parser';
@@ -227,6 +227,24 @@ describe('TaskWorkspaceView', () => {
       .dispatchEvent(dragEvent('drop', 'task-A1'));
     await Promise.resolve();
     expect(service.changeQuadrant).toHaveBeenCalledWith('task-A1', 'not-important-urgent');
+  });
+
+  it('contains and reports a rejected active-task drop into unclassified', async () => {
+    const { view, service } = setup();
+    service.changeQuadrant.mockRejectedValueOnce(
+      new Error('进行中任务必须保留四象限分类'),
+    );
+    await view.onOpen();
+
+    view.containerEl.querySelector<HTMLElement>('[data-quadrant="unclassified"]')!
+      .dispatchEvent(dragEvent('drop', 'task-A2'));
+    await flushPromises();
+
+    expect(service.changeQuadrant).toHaveBeenCalledWith('task-A2', 'unclassified');
+    expect((Notice as unknown as { messages: string[] }).messages.at(-1))
+      .toContain('进行中任务必须保留四象限分类');
+    expect(view.containerEl.querySelector('[data-task-id="task-A2"]')?.closest('[data-quadrant]')
+      ?.getAttribute('data-quadrant')).toBe('important-urgent');
   });
 
   it('guards a double-click while an unclassified start prompt is pending', async () => {
