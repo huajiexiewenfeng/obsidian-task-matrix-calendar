@@ -29,6 +29,18 @@ export function isValidIsoDate(value: string): boolean {
   return toEpochDay(value) !== null;
 }
 
+export function normalizeDateInput(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const normalized = /^\d{8}$/.test(trimmed)
+    ? `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`
+    : trimmed;
+  if (!isValidIsoDate(normalized)) {
+    throw new Error(`请输入有效日期（YYYYMMDD 或 YYYY-MM-DD）：${value}`);
+  }
+  return normalized;
+}
+
 export function classifyDateRisk(
   dueDate: string | undefined,
   status: TaskStatus,

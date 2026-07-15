@@ -35,6 +35,29 @@ describe('TaskService', () => {
     expect(index.get(created.id)?.task.title).toBe('写 方案');
   });
 
+  it('creates a task with normalized detail line endings and preserved line whitespace', async () => {
+    const { service } = setup();
+
+    const created = await service.create({
+      title: '含详情',
+      details: '第一行\r\n\r\n  第二行',
+      plannedDate: '2026-07-15',
+    });
+
+    expect(created.details).toBe('第一行\n\n  第二行');
+  });
+
+  it('normalizes updated details and clears blank-only details', async () => {
+    const { service, index } = setup();
+    const task = await service.create({ title: '编辑详情', details: '原详情' });
+
+    await service.update(task.id, { details: '新详情\r  保留空格' });
+    expect(index.get(task.id)?.task.details).toBe('新详情\n  保留空格');
+
+    await service.update(task.id, { details: '  \r\n  ' });
+    expect(index.get(task.id)?.task.details).toBeUndefined();
+  });
+
   it('rejects blank titles and invalid ISO dates before writing', async () => {
     const { service, vault, inbox } = setup();
 

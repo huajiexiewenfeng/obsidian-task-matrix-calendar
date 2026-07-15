@@ -33,6 +33,7 @@ export class TaskCommandError extends Error {
 
 export interface CreateTaskInput {
   title: string;
+  details?: string;
   sourcePath?: string;
   parentId?: string;
   quadrant?: TaskQuadrant;
@@ -51,6 +52,12 @@ function normalizeTitle(title: string): string {
 function normalizeOptional(value: string | undefined): string | undefined {
   const normalized = value?.trim();
   return normalized || undefined;
+}
+
+function normalizeDetails(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const normalized = value.replace(/\r\n?/g, '\n');
+  return normalized.trim().length > 0 ? normalized : undefined;
 }
 
 function normalizeTags(tags: readonly string[]): string[] {
@@ -82,6 +89,7 @@ export class TaskService {
       const child = makeTask({
         id: this.makeId(),
         title,
+        details: normalizeDetails(input.details),
         parentId: parent.task.id,
         quadrant: parent.task.quadrant,
         project: parent.task.project,
@@ -100,6 +108,7 @@ export class TaskService {
     const task = makeTask({
       id: this.makeId(),
       title,
+      details: normalizeDetails(input.details),
       quadrant: input.quadrant,
       project: normalizeOptional(input.project),
       tags: normalizeTags(input.tags ?? []),
@@ -124,6 +133,8 @@ export class TaskService {
       ...indexed.task,
       ...patch,
       title: patch.title === undefined ? indexed.task.title : normalizeTitle(patch.title),
+      details:
+        patch.details === undefined ? indexed.task.details : normalizeDetails(patch.details),
       project:
         patch.project === undefined ? indexed.task.project : normalizeOptional(patch.project),
       tags: patch.tags === undefined ? indexed.task.tags : normalizeTags(patch.tags),

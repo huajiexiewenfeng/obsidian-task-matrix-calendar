@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { classifyDateRisk } from '../../src/domain/dates';
+import { classifyDateRisk, normalizeDateInput } from '../../src/domain/dates';
+
+describe('normalizeDateInput', () => {
+  it('normalizes compact dates to stored ISO dates', () => {
+    expect(normalizeDateInput('20260715')).toBe('2026-07-15');
+  });
+
+  it('trims valid ISO dates', () => {
+    expect(normalizeDateInput(' 2026-07-15 ')).toBe('2026-07-15');
+  });
+
+  it('returns undefined for blank input', () => {
+    expect(normalizeDateInput('')).toBeUndefined();
+  });
+
+  it('rejects invalid calendar dates', () => {
+    expect(() => normalizeDateInput('20260230')).toThrowError(/有效日期/);
+  });
+});
 
 describe('classifyDateRisk', () => {
   const today = '2026-07-15';
