@@ -9,6 +9,7 @@ export class FakeVault {
   private readonly renameHandlers = new Set<RenameEventHandler>();
   private readonly deleteHandlers = new Set<FileEventHandler>();
   private readonly processFailures = new Map<string, Error[]>();
+  private readonly beforeProcessMutations = new Map<string, Array<(source: string) => string>>();
   private readonly processMutations = new Map<string, Array<(source: string) => string>>();
 
   constructor(files: Record<string, string> = {}) {
@@ -39,8 +40,14 @@ export class FakeVault {
     const failures = this.processFailures.get(path);
     const failure = failures?.shift();
     if (failure) throw failure;
-    const source = this.files.get(path);
+    let source = this.files.get(path);
     if (source === undefined) throw new Error(`Missing fake file: ${path}`);
+    const beforeMutations = this.beforeProcessMutations.get(path);
+    const beforeMutation = beforeMutations?.shift();
+    if (beforeMutation) {
+      source = beforeMutation(source);
+      this.files.set(path, source);
+    }
     let updated = update(source);
     const mutations = this.processMutations.get(path);
     const mutation = mutations?.shift();
@@ -52,6 +59,12 @@ export class FakeVault {
     const failures = this.processFailures.get(path) ?? [];
     failures.push(error);
     this.processFailures.set(path, failures);
+  }
+
+  mutateBeforeNextProcess(path: string, mutation: (source: string) => string): void {
+    const mutations = this.beforeProcessMutations.get(path) ?? [];
+    mutations.push(mutation);
+    this.beforeProcessMutations.set(path, mutations);
   }
 
   mutateAfterNextProcess(path: string, mutation: (source: string) => string): void {

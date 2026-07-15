@@ -183,6 +183,47 @@ describe('MigrationService', () => {
     expect(await vault.read(path)).toBe(fixture);
   });
 
+  it('preserves a concurrent edit that arrives after the initial apply read', async () => {
+    const { service, vault } = setup();
+    const plan = await service.preview();
+    const candidate = plan.files.get(path)![0];
+    const newer = fixture.replace(candidate.originalText, `${candidate.originalText} concurrent`);
+    vault.mutateBeforeNextProcess(path, () => newer);
+
+    await expect(
+      service.apply(plan, new Map([[candidate.candidateId, candidate.proposed]])),
+    ).rejects.toMatchObject({
+      code: 'stale-plan',
+    });
+
+    expect(await vault.read(path)).toBe(newer);
+  });
+
+  it('rolls back when pre-existing parse issues remain after writing', async () => {
+    const brokenPath = `${DEFAULT_SETTINGS.scanRoots[0]}/broken.md`;
+    const source = [
+      '# 2026-07-15',
+      '- [ ] Existing #task ^task-A1',
+      '  - Unknown:: value',
+      '- [ ] Legacy P1',
+    ].join('\n');
+    const { service, vault } = setup(
+      source,
+      DEFAULT_SETTINGS,
+      new FakeVault({ [brokenPath]: source }),
+    );
+    const plan = await service.preview();
+    const candidate = plan.files.get(brokenPath)![0];
+
+    await expect(
+      service.apply(plan, new Map([[candidate.candidateId, candidate.proposed]])),
+    ).rejects.toMatchObject({
+      code: 'verification-failed',
+    });
+
+    expect(await vault.read(brokenPath)).toBe(source);
+  });
+
   it('refuses a stale plan without losing the newer source edit', async () => {
     const { service, vault } = setup();
     const plan = await service.preview();

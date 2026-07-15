@@ -1,7 +1,7 @@
 import { makeTask, type LegacyPriority, type TaskNode, type TaskStatus } from '../domain/task';
 import { createTaskId } from '../domain/id';
 import { isManagedMarkdownPath } from '../index/managed-path';
-import { parseTaskFile, type ParseIssue } from '../markdown/task-parser';
+import { parseTaskFile } from '../markdown/task-parser';
 import { ensureSchemaMarker, serializeTaskBlock } from '../markdown/task-serializer';
 import type { TaskRepository } from '../persistence/obsidian-task-repository';
 import type { VaultProcessPort } from '../persistence/vault-port';
@@ -207,7 +207,6 @@ export class MigrationService {
     createdAt: string,
   ): Promise<void> {
     const before = await this.vault.read(path);
-    const beforeIssues = parseTaskFile(path, before).issues;
     const backupPath = `${this.settings.backupRoot}/${backupTimestamp(createdAt)}/${path}`;
     try {
       await this.vault.create(backupPath, before);
@@ -215,8 +214,12 @@ export class MigrationService {
       throw new MigrationError('backup-failed', '创建迁移备份失败。', path, error);
     }
 
+    let writeCompleted = false;
     try {
       await this.vault.process(path, (current) => {
+        if (current !== before) {
+          throw new MigrationError('stale-plan', '源文档已变化，请重新预览。', path);
+        }
         const eol: '\n' | '\r\n' = current.includes('\r\n') ? '\r\n' : '\n';
         const lines = current.split(/\r\n|\n/);
         for (const selection of [...selected].sort(
@@ -235,6 +238,7 @@ export class MigrationService {
         }
         return ensureSchemaMarker(lines.join(eol), eol);
       });
+      writeCompleted = true;
 
       const verifiedSource = await this.vault.read(path);
       const verified = await this.repository.readAndParse(path);
@@ -245,12 +249,12 @@ export class MigrationService {
       );
       const missingSelected = [...selectedIds].some((id) => !parsedIds.has(id));
       const changedUnselected = unselected.some((item) => !verifiedSource.includes(item.originalText));
-      if (missingSelected || changedUnselected || hasNewParseIssues(beforeIssues, verified.issues)) {
+      if (missingSelected || changedUnselected || verified.issues.length > 0) {
         throw new MigrationError('verification-failed', '迁移写入复核失败。', path);
       }
       await this.repository.refresh(path);
     } catch (error) {
-      await this.vault.process(path, () => before);
+      if (writeCompleted) await this.vault.process(path, () => before);
       if (error instanceof MigrationError) throw error;
       throw new MigrationError('verification-failed', '迁移失败，已恢复备份。', path, error);
     }
@@ -265,23 +269,4 @@ function isCorrectionMap(
 
 function selectedCandidateIdsFor(selected: SelectedCandidate[]): Set<string> {
   return new Set(selected.map((item) => item.candidate.candidateId));
-}
-
-function issueSignature(issue: ParseIssue): string {
-  return `${issue.code}\u0000${issue.taskId ?? ''}\u0000${issue.message}`;
-}
-
-function hasNewParseIssues(before: ParseIssue[], after: ParseIssue[]): boolean {
-  const remaining = new Map<string, number>();
-  for (const issue of before) {
-    const key = issueSignature(issue);
-    remaining.set(key, (remaining.get(key) ?? 0) + 1);
-  }
-  for (const issue of after) {
-    const key = issueSignature(issue);
-    const count = remaining.get(key) ?? 0;
-    if (count === 0) return true;
-    remaining.set(key, count - 1);
-  }
-  return false;
 }
