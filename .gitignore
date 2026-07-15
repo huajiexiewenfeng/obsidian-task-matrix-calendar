@@ -1,0 +1,8 @@
+node_modules/
+coverage/
+main.js
+*.map
+.obsidian/
+dev-vault/
+data.json
+*.backup-*/
