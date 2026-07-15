@@ -2,6 +2,7 @@
 import type { App } from 'obsidian';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { makeTask, type IndexedTask, type TaskNode } from '../../src/domain/task';
+import { TaskWriteError } from '../../src/persistence/obsidian-task-repository';
 import { TaskCommandError } from '../../src/services/task-service';
 import { TaskFormModal, type TaskFormServicePort } from '../../src/ui/task-form-modal';
 
@@ -72,6 +73,8 @@ describe('TaskFormModal', () => {
     expect(textarea(modal, 'details').value).toBe('');
     expect(textarea(modal, 'details').rows).toBe(6);
     expect(select(modal, 'status').value).toBe('todo');
+    expect(select(modal, 'status').disabled).toBe(true);
+    expect(select(modal, 'status').selectedOptions[0]?.textContent).toBe('待办');
     expect(select(modal, 'quadrant').value).toBe('unclassified');
     expect(input(modal, 'plannedDate').value).toBe('2026-07-15');
     expect(input(modal, 'dueDate').value).toBe('');
@@ -91,6 +94,7 @@ describe('TaskFormModal', () => {
     expect(input(modal, 'title').value).toBe('已有任务');
     expect(textarea(modal, 'details').value).toBe('第一行\n第二行');
     expect(select(modal, 'status').value).toBe('in-progress');
+    expect(select(modal, 'status').disabled).toBe(false);
     expect(select(modal, 'quadrant').value).toBe('important-not-urgent');
     expect(input(modal, 'plannedDate').value).toBe('2026-07-10');
     expect(input(modal, 'dueDate').value).toBe('2026-07-20');
@@ -118,7 +122,6 @@ describe('TaskFormModal', () => {
     expect(create).toHaveBeenCalledWith({
       title: '新任务',
       details: '第一行\n第二行',
-      status: 'todo',
       quadrant: 'unclassified',
       plannedDate: '2026-07-16',
       dueDate: '2026-07-31',
@@ -201,6 +204,27 @@ describe('TaskFormModal', () => {
 
     expect(create).toHaveBeenCalledTimes(1);
     expect(modal.contentEl.querySelector('[data-form-error]')?.textContent).toBe('任务标题不能为空。');
+    expect(modal.contentEl.isConnected).toBe(true);
+    expect(save(modal).disabled).toBe(false);
+  });
+
+  it('shows write-conflict context, stays open, and re-enables save', async () => {
+    const create = vi.fn().mockRejectedValue(new TaskWriteError(
+      'fingerprint-mismatch',
+      '任务/收件箱.md',
+      'task-A1',
+      '任务已被外部修改，请刷新后重试。',
+    ));
+    const modal = new TaskFormModal({} as App, service({ create }), () => '2026-07-15');
+    modal.openCreate();
+    input(modal, 'title').value = '新任务';
+
+    save(modal).click();
+    await flushPromises();
+
+    const error = modal.contentEl.querySelector('[data-form-error]')?.textContent;
+    expect(error).toContain('任务/收件箱.md');
+    expect(error).toContain('task-A1');
     expect(modal.contentEl.isConnected).toBe(true);
     expect(save(modal).disabled).toBe(false);
   });

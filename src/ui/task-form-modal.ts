@@ -109,6 +109,7 @@ export class TaskFormModal extends Modal {
     details.rows = 6;
     details.value = task?.details ?? '';
     const status = select('status', task?.status ?? 'todo', STATUS_CHOICES);
+    status.disabled = !task;
     const quadrant = select('quadrant', task?.quadrant ?? 'unclassified', QUADRANT_CHOICES);
     const plannedDate = this.dateInput('plannedDate', task?.plannedDate ?? (task ? '' : this.today()));
     const dueDate = this.dateInput('dueDate', task?.dueDate ?? '');
@@ -177,10 +178,9 @@ export class TaskFormModal extends Modal {
       return;
     }
 
-    const patch = {
+    const valuesToSave = {
       title,
       details: String(values.get('details') ?? ''),
-      status: String(values.get('status')) as TaskStatus,
       quadrant: String(values.get('quadrant')) as TaskQuadrant,
       plannedDate,
       dueDate,
@@ -194,9 +194,12 @@ export class TaskFormModal extends Modal {
     save.disabled = true;
     try {
       if (this.mode.kind === 'create') {
-        await this.service.create(patch);
+        await this.service.create(valuesToSave);
       } else {
-        await this.service.update(this.mode.indexed.task.id, patch);
+        await this.service.update(this.mode.indexed.task.id, {
+          ...valuesToSave,
+          status: String(values.get('status')) as TaskStatus,
+        });
       }
       this.close();
     } catch (error) {

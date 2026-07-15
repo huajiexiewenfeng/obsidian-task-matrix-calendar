@@ -148,7 +148,16 @@ export class TaskService {
     validateDate(updated.dueDate);
 
     if (updated.status !== indexed.task.status) {
-      this.assertTransition(indexed.task, updated.status);
+      this.assertTransition({ ...updated, status: indexed.task.status }, updated.status);
+    }
+    if (updated.status !== 'todo' && updated.quadrant === 'unclassified') {
+      throw new TaskCommandError(
+        'classification-required',
+        '任务进入进行中或完成前必须选择四象限分类。',
+        id,
+      );
+    }
+    if (updated.status !== indexed.task.status) {
       if (updated.status === 'done') this.assertParentGate(updated);
     }
     await this.persist(indexed, updated);

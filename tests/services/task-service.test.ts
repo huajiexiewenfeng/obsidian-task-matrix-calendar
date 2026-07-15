@@ -108,6 +108,41 @@ describe('TaskService', () => {
     await service.transition(task.id, 'todo');
   });
 
+  it('uses the merged quadrant when classifying and starting in one update', async () => {
+    const { service, index } = setup();
+    const task = await service.create({ title: '一步开始' });
+
+    await service.update(task.id, {
+      status: 'in-progress',
+      quadrant: 'important-urgent',
+    });
+
+    expect(index.get(task.id)?.task).toMatchObject({
+      status: 'in-progress',
+      quadrant: 'important-urgent',
+    });
+  });
+
+  it.each(['in-progress', 'done'] as const)(
+    'rejects changing a %s task to unclassified',
+    async (status) => {
+      const { service, index } = setup();
+      const task = await service.create({
+        title: '保持分类',
+        quadrant: 'important-not-urgent',
+      });
+      await service.transition(task.id, status);
+
+      await expect(service.update(task.id, { quadrant: 'unclassified' })).rejects.toMatchObject({
+        code: 'classification-required',
+      });
+      expect(index.get(task.id)?.task).toMatchObject({
+        status,
+        quadrant: 'important-not-urgent',
+      });
+    },
+  );
+
   it('completes an unclassified todo only with a supplied quadrant in one write', async () => {
     const { service, index } = setup();
     const task = await service.create({ title: '直接完成' });
