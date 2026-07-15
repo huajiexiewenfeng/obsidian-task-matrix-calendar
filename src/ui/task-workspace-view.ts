@@ -183,8 +183,23 @@ export class TaskWorkspaceView extends ItemView {
     search.placeholder = '搜索标题、详情、项目、标签……';
     search.value = this.filters.query;
     search.addEventListener('input', () => {
+      const restoreFocus = document.activeElement === search;
+      const selectionStart = search.selectionStart;
+      const selectionEnd = search.selectionEnd;
+      const selectionDirection = search.selectionDirection;
       this.filters.query = search.value;
       this.render();
+      if (restoreFocus) {
+        const replacement = this.containerEl.querySelector<HTMLInputElement>('[data-filter="query"]');
+        replacement?.focus();
+        if (selectionStart !== null && selectionEnd !== null) {
+          replacement?.setSelectionRange(
+            selectionStart,
+            selectionEnd,
+            selectionDirection ?? 'none',
+          );
+        }
+      }
     });
     toolbar.append(search);
 

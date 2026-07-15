@@ -138,6 +138,31 @@ describe('TaskWorkspaceView', () => {
     expect(visibleTaskIds(view)).toEqual(['task-B1']);
   });
 
+  it('keeps search focus and caret while filtering across multiple input renders', async () => {
+    const { view } = setup();
+    await view.onOpen();
+    document.body.replaceChildren(view.containerEl);
+    view.containerEl.querySelector<HTMLInputElement>('[data-filter="query"]')!.focus();
+
+    for (const character of ['未', '分']) {
+      const input = view.containerEl.querySelector<HTMLInputElement>('[data-filter="query"]')!;
+      input.value += character;
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        data: character,
+        inputType: 'insertText',
+      }));
+    }
+
+    const replacement = view.containerEl.querySelector<HTMLInputElement>('[data-filter="query"]')!;
+    expect(document.activeElement).toBe(replacement);
+    expect(replacement.value).toBe('未分');
+    expect(replacement.selectionStart).toBe(2);
+    expect(replacement.selectionEnd).toBe(2);
+    expect(visibleTaskIds(view)).toEqual(['task-A1']);
+  });
+
   it('runs legacy import once and disables its button while pending', async () => {
     let finish!: () => void;
     const importAction = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
