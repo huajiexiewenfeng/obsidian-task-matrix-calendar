@@ -5,6 +5,10 @@
 - [ ] 发布开源插件 #task ^task-01JZA1
   - 状态:: 待办
   - 分类:: 重要不紧急
+  - 详情::
+    > 第一行
+    >
+    >   保留前导空格
   - 项目:: task-matrix-calendar
   - 标签:: Obsidian, 开源, Obsidian
   - 计划日期:: 2026-07-20

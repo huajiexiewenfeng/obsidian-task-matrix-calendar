@@ -30,6 +30,13 @@ function serializeSingleTask(task: TaskNode, indent: number): string[] {
     `${fieldPrefix}- 分类:: ${QUADRANT_LABELS[task.quadrant]}`,
   ];
 
+  if (task.details) {
+    lines.push(`${fieldPrefix}- 详情::`);
+    const quotePrefix = ' '.repeat(indent + 4);
+    for (const detailLine of task.details.split('\n')) {
+      lines.push(`${quotePrefix}>${detailLine ? ` ${detailLine}` : ''}`);
+    }
+  }
   if (task.project) {
     lines.push(`${fieldPrefix}- 项目:: ${task.project}`);
   }

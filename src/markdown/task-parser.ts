@@ -151,6 +151,7 @@ export function parseTaskFile(path: string, source: string): ParseResult {
 
     let status: TaskStatus | undefined;
     let quadrant: TaskQuadrant | undefined;
+    let details: string | undefined;
     let project: string | undefined;
     let plannedDate: string | undefined;
     let dueDate: string | undefined;
@@ -216,6 +217,31 @@ export function parseTaskFile(path: string, source: string): ParseResult {
               addIssue('unknown-task-content', cursor, `未知分类：${value}`, taskLine.id);
             }
             break;
+          case '详情': {
+            if (value) {
+              addIssue(
+                'unknown-task-content',
+                cursor,
+                '详情字段必须使用下一行的引用块。',
+                taskLine.id,
+              );
+              break;
+            }
+            const detailLines: string[] = [];
+            let detailCursor = cursor + 1;
+            const prefix = `${' '.repeat(taskLine.indent + 4)}>`;
+            while (detailCursor < lines.length && lines[detailCursor].startsWith(prefix)) {
+              const raw = lines[detailCursor].slice(prefix.length);
+              detailLines.push(raw.startsWith(' ') ? raw.slice(1) : raw);
+              if (!sawChild) {
+                ownLines.push(lines[detailCursor]);
+              }
+              detailCursor += 1;
+            }
+            details = detailLines.length > 0 ? detailLines.join('\n') : undefined;
+            cursor = detailCursor;
+            continue;
+          }
           case '项目':
             project = value || undefined;
             break;
@@ -276,6 +302,7 @@ export function parseTaskFile(path: string, source: string): ParseResult {
     const task = makeTask({
       id: taskLine.id,
       title: taskLine.title,
+      details,
       status: resolvedStatus,
       quadrant: quadrant ?? 'unclassified',
       project,

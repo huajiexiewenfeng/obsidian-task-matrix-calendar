@@ -13,6 +13,7 @@ describe('guarded task patches', () => {
     const source = canonicalSource();
     const parsed = parseTaskFile('任务/任务收件箱.md', source);
     const parent = parsed.tasks[0];
+    expect(parent.task.details).toBe('第一行\n\n  保留前导空格');
     const children = parsed.tasks.slice(1).map((item) => item.task);
     const replacement = serializeTaskBlock(
       { ...parent.task, title: '发布插件新版' },
@@ -24,6 +25,12 @@ describe('guarded task patches', () => {
     const result = replaceTaskBlock(source, parent, replacement);
     expect(result.ok).toBe(true);
     if (result.ok) {
+      const lines = source.split(parent.location.eol);
+      const prefix = `${lines.slice(0, parent.location.startLine).join(parent.location.eol)}${parent.location.eol}`;
+      const suffix = `${parent.location.eol}${lines.slice(parent.location.endLine + 1).join(parent.location.eol)}`;
+
+      expect(result.source.slice(0, prefix.length)).toBe(prefix);
+      expect(result.source.slice(-suffix.length)).toBe(suffix);
       expect(result.source).toContain('- [ ] 发布插件新版 #task ^task-01JZA1');
       expect(result.source).toContain('任务块之后的普通段落必须保留。');
       expect(result.source).not.toContain('发布开源插件');

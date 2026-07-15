@@ -12,6 +12,20 @@ function canonicalSource(): string {
 }
 
 describe('task serializer', () => {
+  it('round trips multiline details with CRLF and leading spaces', () => {
+    const details = '第一行\n\n  保留前导空格';
+    const task = makeTask({ id: 'task-DETA11', title: '多行任务', details });
+    const block = serializeTaskBlock(task, [], 0, '\r\n');
+
+    expect(block).toContain(
+      ['  - 详情::', '    > 第一行', '    >', '    >   保留前导空格'].join('\r\n'),
+    );
+    const parsed = parseTaskFile('任务/详情.md', block);
+    expect(parsed.issues).toEqual([]);
+    expect(parsed.tasks[0].task.details).toBe(details);
+    expect(parsed.tasks[0].location.eol).toBe('\r\n');
+  });
+
   it('uses canonical field order, CRLF, and deduplicated tags', () => {
     const task = makeTask({
       id: 'task-01JZA9',

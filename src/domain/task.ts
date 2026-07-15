@@ -13,6 +13,7 @@ export type DateRisk = 'none' | 'upcoming' | 'due-today' | 'overdue';
 export interface TaskNode {
   id: string;
   title: string;
+  details?: string;
   status: TaskStatus;
   quadrant: TaskQuadrant;
   plannedDate?: string;
@@ -52,6 +53,7 @@ export function makeTask(input: Pick<TaskNode, 'id' | 'title'> & Partial<TaskNod
   return {
     id: input.id,
     title: input.title,
+    details: input.details,
     status: input.status ?? 'todo',
     quadrant: input.quadrant ?? 'unclassified',
     tags: input.tags ?? [],

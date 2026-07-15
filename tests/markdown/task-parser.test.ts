@@ -19,6 +19,7 @@ describe('parseTaskFile', () => {
     expect(result.tasks[0].task.childrenIds).toEqual(['task-01JZA2', 'task-01JZA3']);
     expect(result.tasks[1].task.parentId).toBe('task-01JZA1');
     expect(result.tasks[0].task.tags).toEqual(['Obsidian', '开源']);
+    expect(result.tasks[0].task.details).toBe('第一行\n\n  保留前导空格');
     expect(result.tasks[0].task.plannedDate).toBe('2026-07-20');
     expect(result.tasks[0].task.dueDate).toBe('2026-07-31');
     expect(result.tasks[1].task.status).toBe('done');
@@ -33,11 +34,20 @@ describe('parseTaskFile', () => {
     expect(result.tasks[0].location).toMatchObject({
       sourcePath: '任务/任务收件箱.md',
       startLine: 4,
-      endLine: 20,
+      endLine: 24,
       indent: 0,
       eol: '\n',
     });
     expect(result.tasks[0].location.fingerprint).toMatch(/^[a-f0-9]{64}$/);
+
+    const changed = parseTaskFile(
+      '任务/任务收件箱.md',
+      fixture('canonical-tasks.md').replace('保留前导空格', '修改详情'),
+    );
+    expect(changed.tasks[0].location.fingerprint).not.toBe(
+      result.tasks[0].location.fingerprint,
+    );
+    expect(changed.tasks[0].ownFingerprint).not.toBe(result.tasks[0].ownFingerprint);
   });
 
   it('marks malformed task blocks read-only with stable issue codes', () => {
