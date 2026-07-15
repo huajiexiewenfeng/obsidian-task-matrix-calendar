@@ -72,7 +72,9 @@ export class Modal {
   constructor(readonly app: App) {}
 
   open(): void {
+    if (this.opened) return;
     this.opened = true;
+    document.body.append(this.contentEl);
     this.onOpen();
   }
 
@@ -80,6 +82,7 @@ export class Modal {
     if (!this.opened) return;
     this.opened = false;
     this.onClose();
+    this.contentEl.remove();
   }
 
   onOpen(): void {}
