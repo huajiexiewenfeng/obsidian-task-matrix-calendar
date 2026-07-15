@@ -25,6 +25,8 @@ export interface ParseIssue {
 
 export interface ParsedTask extends IndexedTask {
   readOnly: boolean;
+  checkboxChecked: boolean;
+  ownFingerprint: string;
 }
 
 export interface ParseResult {
@@ -106,6 +108,10 @@ function parseTags(value: string): string[] {
   return [...new Set(value.split(',').map((tag) => tag.trim()).filter(Boolean))];
 }
 
+function normalizeCheckbox(line: string): string {
+  return line.replace(/^( *- \[)[ xX](\])/, '$1 $2');
+}
+
 export function parseTaskFile(path: string, source: string): ParseResult {
   const eol: '\n' | '\r\n' = source.includes('\r\n') ? '\r\n' : '\n';
   const lines = source.split(/\r\n|\n/);
@@ -155,6 +161,7 @@ export function parseTaskFile(path: string, source: string): ParseResult {
     const childIds: string[] = [];
     const descendants: ParsedTask[] = [];
     const seenFields = new Set<string>();
+    const ownLines = [normalizeCheckbox(lines[startLine])];
 
     while (cursor < lines.length) {
       const line = lines[cursor];
@@ -192,6 +199,9 @@ export function parseTaskFile(path: string, source: string): ParseResult {
           );
         }
         seenFields.add(label);
+        if (!sawChild) {
+          ownLines.push(line);
+        }
 
         switch (label) {
           case '状态':
@@ -239,6 +249,9 @@ export function parseTaskFile(path: string, source: string): ParseResult {
       }
 
       addIssue('unknown-task-content', cursor, '任务块包含无法识别的缩进内容。', taskLine.id);
+      if (!sawChild) {
+        ownLines.push(line);
+      }
       cursor += 1;
     }
 
@@ -284,6 +297,8 @@ export function parseTaskFile(path: string, source: string): ParseResult {
         fingerprint: fingerprintTaskBlock(lines.slice(startLine, endLine + 1).join(eol)),
       },
       readOnly: readOnlyIds.has(taskLine.id),
+      checkboxChecked: taskLine.checked,
+      ownFingerprint: fingerprintTaskBlock(ownLines.join(eol)),
     };
 
     return { tasks: [parsed, ...descendants], nextLine: cursor };
