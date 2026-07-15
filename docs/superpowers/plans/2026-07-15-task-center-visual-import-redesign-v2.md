@@ -761,10 +761,10 @@ Update every pre-existing service test to pass its intended source path explicit
 
 ```ts
 expect(candidates.map((item) => item.recognition.kind)).toEqual([
-  'checkbox', 'list-item', 'list-item', 'list-item',
+  'checkbox', 'list-item', 'list-item',
 ]);
 expect(candidates.map((item) => item.recognition.defaultSelected)).toEqual([
-  true, false, false, false,
+  true, false, false,
 ]);
 ```
 
