@@ -12,6 +12,16 @@ function canonicalSource(): string {
 }
 
 describe('task serializer', () => {
+  it('round trips explicit empty details as a blank continuation line', () => {
+    const task = makeTask({ id: 'task-EMPTY1', title: '空详情任务', details: '' });
+    const block = serializeTaskBlock(task, []);
+
+    expect(block).toContain(['  - 详情::', '    >'].join('\n'));
+    const parsed = parseTaskFile('任务/空详情.md', block);
+    expect(parsed.issues).toEqual([]);
+    expect(parsed.tasks[0].task.details).toBe('');
+  });
+
   it('round trips multiline details with CRLF and leading spaces', () => {
     const details = '第一行\n\n  保留前导空格';
     const task = makeTask({ id: 'task-DETA11', title: '多行任务', details });
