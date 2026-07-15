@@ -91,7 +91,11 @@ export class Modal {
 }
 
 export class Notice {
-  constructor(readonly message: string) {}
+  static readonly messages: string[] = [];
+
+  constructor(readonly message: string) {
+    Notice.messages.push(message);
+  }
 }
 
 export class PluginSettingTab {

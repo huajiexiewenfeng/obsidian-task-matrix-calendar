@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { App } from 'obsidian';
+import { Notice, type App } from 'obsidian';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { makeTask, type TaskNode } from '../../src/domain/task';
 import type { MigrationPlan } from '../../src/services/migration-service';
@@ -93,6 +93,7 @@ async function flushPromises(): Promise<void> {
 
 afterEach(() => {
   document.body.replaceChildren();
+  (Notice as unknown as { messages: string[] }).messages.length = 0;
 });
 
 describe('MigrationModal', () => {
@@ -107,6 +108,7 @@ describe('MigrationModal', () => {
     expect(checkbox(modal, 'c-medium').checked).toBe(false);
     expect(checkbox(modal, 'c-low').checked).toBe(false);
     expect(confirm(modal).disabled).toBe(false);
+    expect(row(modal, 'c-high').textContent).toContain('- [ ] 高置信旧任务 P1');
     expect(modal.contentEl.textContent).toContain('任务/无法读取.md');
     expect(modal.contentEl.textContent).toContain('没有读取权限');
 
@@ -167,6 +169,8 @@ describe('MigrationModal', () => {
       }) as TaskNode],
     ]));
     expect(plan.files.get('任务/旧.md')![0].proposed).toEqual(original);
+    expect((Notice as unknown as { messages: string[] }).messages)
+      .toEqual(['已导入 1 个旧任务。']);
     expect(modal.contentEl.isConnected).toBe(false);
   });
 
@@ -204,7 +208,7 @@ describe('MigrationModal', () => {
     expect(modal.contentEl.isConnected).toBe(true);
   });
 
-  it('shows pending state, prevents duplicate apply, and closes on success', async () => {
+  it('locks selection, file toggles, editors and submit while apply is pending', async () => {
     let resolveApply!: () => void;
     const apply = vi.fn().mockReturnValue(new Promise<void>((resolve) => {
       resolveApply = resolve;
@@ -212,14 +216,37 @@ describe('MigrationModal', () => {
     const modal = new MigrationModal({} as App, service({ apply }));
     await modal.preview();
 
-    confirm(modal).click();
-    confirm(modal).click();
+    const confirmButton = confirm(modal);
+    const candidateToggle = checkbox(modal, 'c-high');
+    const fileToggle = modal.contentEl.querySelector<HTMLButtonElement>(
+      '[data-file-path="任务/旧.md"] [data-action="select-file"]',
+    )!;
+    const title = field(modal, 'c-high', 'title');
+    confirmButton.click();
 
-    expect(confirm(modal).disabled).toBe(true);
+    expect(confirmButton.disabled).toBe(true);
+    expect(candidateToggle.disabled).toBe(true);
+    expect(fileToggle.disabled).toBe(true);
+    expect(title.disabled).toBe(true);
     expect(modal.contentEl.querySelector('[data-migration-status]')?.textContent).toContain('正在导入');
+
+    candidateToggle.click();
+    fileToggle.click();
+    title.value = '待处理期间不应改变';
+    change(title);
+    confirmButton.click();
+
+    expect(checkbox(modal, 'c-high').checked).toBe(true);
+    expect(checkbox(modal, 'c-medium').checked).toBe(false);
+    expect(field(modal, 'c-high', 'title').value).toBe('高置信旧任务');
+    expect(modal.contentEl.querySelector('[data-migration-status]')?.textContent)
+      .toContain('正在导入');
+    expect(confirm(modal).disabled).toBe(true);
     expect(apply).toHaveBeenCalledTimes(1);
     resolveApply();
     await flushPromises();
+    expect((Notice as unknown as { messages: string[] }).messages)
+      .toEqual(['已导入 1 个旧任务。']);
     expect(modal.contentEl.isConnected).toBe(false);
   });
 
@@ -235,5 +262,7 @@ describe('MigrationModal', () => {
       .toContain('写入复核失败');
     expect(modal.contentEl.isConnected).toBe(true);
     expect(confirm(modal).disabled).toBe(false);
+    expect(checkbox(modal, 'c-high').disabled).toBe(false);
+    expect(field(modal, 'c-high', 'title').disabled).toBe(false);
   });
 });

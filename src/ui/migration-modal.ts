@@ -81,6 +81,7 @@ export class MigrationModal extends Modal {
   private plan?: MigrationPlan;
   private readonly selected = new Set<string>();
   private readonly corrections = new Map<string, TaskNode>();
+  private pending = false;
 
   constructor(app: App, private readonly service: MigrationModalServicePort) {
     super(app);
@@ -89,6 +90,7 @@ export class MigrationModal extends Modal {
   async preview(_legacyPaths?: string[]): Promise<void> {
     void _legacyPaths;
     this.plan = await this.service.preview();
+    this.pending = false;
     this.selected.clear();
     this.corrections.clear();
     for (const candidates of this.plan.files.values()) {
@@ -124,8 +126,13 @@ export class MigrationModal extends Modal {
       selectFile.dataset.action = 'select-file';
       const allSelected = candidates.length > 0
         && candidates.every((candidate) => this.selected.has(candidate.candidateId));
+      selectFile.disabled = this.pending;
       selectFile.textContent = allSelected ? '取消选择本文件全部候选' : '选择本文件全部候选';
       selectFile.addEventListener('click', () => {
+        if (this.pending) {
+          this.render();
+          return;
+        }
         for (const candidate of candidates) {
           if (allSelected) this.selected.delete(candidate.candidateId);
           else this.selected.add(candidate.candidateId);
@@ -148,10 +155,11 @@ export class MigrationModal extends Modal {
     confirm.dataset.action = 'confirm';
     confirm.textContent = '确认迁移所选任务';
     confirm.addEventListener('click', () => {
-      if (!confirm.disabled) void this.confirm(confirm);
+      if (!confirm.disabled) void this.confirm();
     });
     this.contentEl.append(status, confirm);
-    this.updateConfirm();
+    this.updatePendingControls();
+    if (this.pending) this.showStatus('正在导入旧任务…');
   }
 
   private renderFailures(): void {
@@ -183,8 +191,13 @@ export class MigrationModal extends Modal {
     checkbox.type = 'checkbox';
     checkbox.dataset.selectionId = candidateId;
     checkbox.checked = this.selected.has(candidateId);
+    checkbox.disabled = this.pending;
     checkbox.setAttribute('aria-label', '选择迁移候选');
     checkbox.addEventListener('change', () => {
+      if (this.pending) {
+        this.render();
+        return;
+      }
       if (checkbox.checked) this.selected.add(candidateId);
       else this.selected.delete(candidateId);
       this.updateConfirm();
@@ -235,6 +248,17 @@ export class MigrationModal extends Modal {
       ...task,
       legacyPriority: value ? value as LegacyPriority : undefined,
     }));
+    for (const control of [
+      title,
+      details,
+      status,
+      plannedDate,
+      dueDate,
+      quadrant,
+      legacyPriority,
+    ]) {
+      control.disabled = this.pending;
+    }
     editor.append(
       field('标题', title),
       field('详情', details),
@@ -261,6 +285,10 @@ export class MigrationModal extends Modal {
     update: (task: TaskNode, value: string) => TaskNode,
   ): void {
     const updateCorrection = () => {
+      if (this.pending) {
+        this.render();
+        return;
+      }
       const current = this.corrections.get(candidateId);
       if (current) this.corrections.set(candidateId, update(current, control.value));
     };
@@ -268,8 +296,8 @@ export class MigrationModal extends Modal {
     control.addEventListener('change', updateCorrection);
   }
 
-  private async confirm(confirm: HTMLButtonElement): Promise<void> {
-    if (!this.plan) return;
+  private async confirm(): Promise<void> {
+    if (!this.plan || this.pending) return;
     this.clearErrors();
     if (!this.normalizeSelectedDates()) return;
 
@@ -278,7 +306,8 @@ export class MigrationModal extends Modal {
       const corrected = this.corrections.get(id);
       if (corrected) selectedCorrections.set(id, corrected);
     }
-    confirm.disabled = true;
+    this.pending = true;
+    this.updatePendingControls();
     this.showStatus('正在导入旧任务…');
     try {
       await this.service.apply(this.plan, selectedCorrections);
@@ -288,7 +317,8 @@ export class MigrationModal extends Modal {
     } catch (error) {
       this.showError(error instanceof Error ? error.message : String(error));
     } finally {
-      confirm.disabled = false;
+      this.pending = false;
+      this.updatePendingControls();
     }
   }
 
@@ -368,6 +398,19 @@ export class MigrationModal extends Modal {
 
   private updateConfirm(): void {
     const confirm = this.contentEl.querySelector<HTMLButtonElement>('[data-action="confirm"]');
-    if (confirm) confirm.disabled = this.selected.size === 0;
+    if (confirm) confirm.disabled = this.pending || this.selected.size === 0;
+  }
+
+  private updatePendingControls(): void {
+    this.contentEl.querySelectorAll<
+      HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >(
+      '[data-action="select-file"], [data-selection-id], '
+      + '.tmc-migration-editor input, .tmc-migration-editor textarea, '
+      + '.tmc-migration-editor select',
+    ).forEach((control) => {
+      control.disabled = this.pending;
+    });
+    this.updateConfirm();
   }
 }
