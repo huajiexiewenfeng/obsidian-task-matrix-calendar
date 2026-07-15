@@ -87,8 +87,7 @@ export class MigrationModal extends Modal {
     super(app);
   }
 
-  async preview(_legacyPaths?: string[]): Promise<void> {
-    void _legacyPaths;
+  async preview(): Promise<void> {
     this.plan = await this.service.preview();
     this.pending = false;
     this.selected.clear();

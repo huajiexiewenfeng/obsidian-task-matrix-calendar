@@ -116,11 +116,11 @@ export class MigrationService {
     private readonly now: Clock = () => new Date().toISOString(),
   ) {}
 
-  async preview(paths?: readonly string[]): Promise<MigrationPlan> {
+  async preview(): Promise<MigrationPlan> {
     const files = new Map<string, MigrationCandidate[]>();
     const failures = new Map<string, string>();
     const eligiblePaths = new Map<string, string>();
-    for (const path of paths ?? this.vault.listMarkdownPaths()) {
+    for (const path of this.vault.listMarkdownPaths()) {
       const normalized = normalizeVaultPath(path);
       if (!isManagedMarkdownPath(normalized, this.settings)) continue;
       const key = normalized.toLocaleLowerCase();

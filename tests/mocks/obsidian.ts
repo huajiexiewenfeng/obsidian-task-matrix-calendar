@@ -1,7 +1,14 @@
 export class Plugin {
   app: unknown;
-  readonly registeredViews: Array<{ type: string; creator: unknown }> = [];
-  readonly registeredCommands: Array<{ id: string; name?: string; callback?: () => void }> = [];
+  readonly registeredViews: Array<{
+    type: string;
+    creator: (leaf: WorkspaceLeaf) => ItemView;
+  }> = [];
+  readonly registeredCommands: Array<{
+    id: string;
+    name?: string;
+    callback?: () => unknown;
+  }> = [];
   readonly ribbonIcons: Array<{ icon: string; title: string; callback: () => void; element: HTMLElement }> = [];
   readonly settingTabs: unknown[] = [];
 
@@ -13,11 +20,11 @@ export class Plugin {
     return undefined;
   }
 
-  registerView(type: string, creator: unknown): void {
+  registerView(type: string, creator: (leaf: WorkspaceLeaf) => ItemView): void {
     this.registeredViews.push({ type, creator });
   }
 
-  addCommand(command: { id: string; name?: string; callback?: () => void }): void {
+  addCommand(command: { id: string; name?: string; callback?: () => unknown }): void {
     this.registeredCommands.push(command);
   }
 
@@ -45,7 +52,9 @@ export function normalizePath(path: string): string {
 
 export class App {}
 
-export class WorkspaceLeaf {}
+export class WorkspaceLeaf {
+  view!: ItemView;
+}
 
 export class ItemView {
   readonly containerEl = document.createElement('div');

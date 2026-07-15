@@ -22,11 +22,15 @@ import {
   validateSettings,
   type TaskMatrixCalendarSettings,
 } from './settings';
-import { CalendarView, CALENDAR_VIEW_TYPE } from './ui/calendar-view';
 import { ClassificationModal } from './ui/classification-modal';
 import { MigrationModal } from './ui/migration-modal';
 import { TaskMatrixCalendarSettingTab } from './ui/settings-tab';
-import { TaskMatrixView, TASK_MATRIX_VIEW_TYPE } from './ui/task-matrix-view';
+import { TaskFormModal } from './ui/task-form-modal';
+import {
+  TASK_WORKSPACE_VIEW_TYPE,
+  TaskWorkspaceView,
+  type TaskWorkspaceMode,
+} from './ui/task-workspace-view';
 
 export const COMMANDS = {
   openTasks: 'open-task-matrix',
@@ -129,27 +133,24 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
     const trashService = new TrashService(repository, index, vault, this.settings);
     const migrationService = new MigrationService(repository, vault, this.settings);
     const coordinator = new ExternalCheckboxCoordinator(repository, index, prompt);
+    const taskFormModal = new TaskFormModal(this.app, taskService, today);
     const migrationModal = new MigrationModal(this.app, migrationService);
     this.registerView(
-      TASK_MATRIX_VIEW_TYPE,
-      (leaf) => new TaskMatrixView(
+      TASK_WORKSPACE_VIEW_TYPE,
+      (leaf) => new TaskWorkspaceView(
         leaf,
         index,
         taskService,
         prompt,
+        taskFormModal,
         this.settings.dueSoonDays,
         today,
-        trashService,
-        (taskId) => void this.locateTask(taskId, index),
+        () => migrationModal.preview(),
       ),
-    );
-    this.registerView(
-      CALENDAR_VIEW_TYPE,
-      (leaf) => new CalendarView(leaf, index, taskService, today),
     );
 
     const ribbon = this.addRibbonIcon('check-square', '打开任务中心', () => {
-      void this.activateView(TASK_MATRIX_VIEW_TYPE);
+      void this.activateTaskWorkspace('tasks');
     });
     ribbon.classList.add('task-matrix-calendar-ribbon');
     this.unsubscribeRisk = index.subscribe((snapshot) => {
@@ -161,12 +162,20 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
       else delete ribbon.dataset.riskCount;
     });
 
-    this.addCommand({ id: COMMANDS.openTasks, name: '打开任务中心', callback: () => void this.activateView(TASK_MATRIX_VIEW_TYPE) });
-    this.addCommand({ id: COMMANDS.openCalendar, name: '打开任务日历', callback: () => void this.activateView(CALENDAR_VIEW_TYPE) });
+    this.addCommand({
+      id: COMMANDS.openTasks,
+      name: '打开任务中心',
+      callback: () => void this.activateTaskWorkspace('tasks'),
+    });
+    this.addCommand({
+      id: COMMANDS.openCalendar,
+      name: '打开任务日历',
+      callback: () => void this.activateTaskWorkspace('calendar'),
+    });
     this.addCommand({
       id: COMMANDS.migrate,
       name: '预览旧任务迁移',
-      callback: () => void migrationModal.preview(vault.listMarkdownPaths()),
+      callback: () => void migrationModal.preview(),
     });
     this.addSettingTab(new TaskMatrixCalendarSettingTab(this.app, this, trashService, async () => scanner.scanAll()));
 
@@ -184,22 +193,17 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
-  async activateView(type: string): Promise<void> {
-    let leaf: WorkspaceLeaf | undefined = this.app.workspace.getLeavesOfType(type)[0];
+  async activateTaskWorkspace(mode: TaskWorkspaceMode): Promise<void> {
+    let leaf: WorkspaceLeaf | undefined = this.app.workspace.getLeavesOfType(
+      TASK_WORKSPACE_VIEW_TYPE,
+    )[0];
     if (!leaf) {
       leaf = this.app.workspace.getLeaf('tab');
-      await leaf.setViewState({ type, active: true });
+      await leaf.setViewState({ type: TASK_WORKSPACE_VIEW_TYPE, active: true });
     }
+    const view = leaf.view;
+    if (view instanceof TaskWorkspaceView) view.setMode(mode);
     await this.app.workspace.revealLeaf(leaf);
-  }
-
-  private async locateTask(taskId: string, index: TaskIndex): Promise<void> {
-    const indexed = index.get(taskId);
-    if (!indexed) return;
-    const file = this.app.vault.getAbstractFileByPath(indexed.location.sourcePath);
-    if (!(file instanceof TFile)) return;
-    const leaf = this.app.workspace.getLeaf('tab');
-    await leaf.openFile(file, { active: true });
   }
 
   private async startRuntime(

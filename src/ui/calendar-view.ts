@@ -1,8 +1,4 @@
-import { ItemView, type WorkspaceLeaf } from 'obsidian';
 import type { TaskNode } from '../domain/task';
-import type { TaskIndex } from '../index/task-index';
-
-export const CALENDAR_VIEW_TYPE = 'task-matrix-calendar-calendar-view';
 
 export interface CalendarEntry {
   taskId: string;
@@ -57,10 +53,6 @@ export function buildMonthModel(
       entries,
     };
   });
-}
-
-export interface CalendarTaskServicePort {
-  changePlannedDate(id: string, plannedDate?: string): Promise<void>;
 }
 
 export interface CalendarPanelOptions {
@@ -183,55 +175,4 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
     unscheduled.append(createTaskButton(task.id, task.title, options.onEdit));
   }
   host.append(unscheduled);
-}
-
-export class CalendarView extends ItemView {
-  private unsubscribe?: () => void;
-  private cursor: Date;
-  private selectedDate: string;
-
-  constructor(
-    leaf: WorkspaceLeaf,
-    private readonly index: TaskIndex,
-    private readonly service: CalendarTaskServicePort,
-    private readonly today: () => string,
-  ) {
-    super(leaf);
-    this.cursor = new Date(`${today()}T00:00:00Z`);
-    this.selectedDate = today();
-  }
-
-  getViewType(): string { return CALENDAR_VIEW_TYPE; }
-  getDisplayText(): string { return '任务日历'; }
-
-  async onOpen(): Promise<void> {
-    this.unsubscribe = this.index.subscribe(() => this.render());
-    this.render();
-  }
-
-  async onClose(): Promise<void> {
-    this.unsubscribe?.();
-  }
-
-  private render(): void {
-    const tasks = this.index.snapshot().tasks.map((item) => item.task);
-    renderCalendarPanel(this.containerEl, {
-      cursor: this.cursor,
-      selectedDate: this.selectedDate,
-      tasks,
-      today: this.today(),
-      onChangeMonth: (delta) => this.moveMonth(delta),
-      onSelectDate: (date) => {
-        this.selectedDate = date;
-        this.render();
-      },
-      onEdit: () => undefined,
-      onMove: (taskId, plannedDate) => void this.service.changePlannedDate(taskId, plannedDate),
-    });
-  }
-
-  private moveMonth(delta: number): void {
-    this.cursor = new Date(Date.UTC(this.cursor.getUTCFullYear(), this.cursor.getUTCMonth() + delta, 1));
-    this.render();
-  }
 }

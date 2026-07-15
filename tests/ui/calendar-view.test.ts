@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
-import type { WorkspaceLeaf } from 'obsidian';
 import { describe, expect, it, vi } from 'vitest';
 import { makeTask } from '../../src/domain/task';
-import { buildMonthModel, CalendarView, renderCalendarPanel } from '../../src/ui/calendar-view';
-import { TaskIndex } from '../../src/index/task-index';
+import { buildMonthModel, renderCalendarPanel } from '../../src/ui/calendar-view';
 
 describe('buildMonthModel', () => {
   it('builds 42 cells with planned cards and deduplicated due markers', () => {
@@ -122,20 +120,5 @@ describe('renderCalendarPanel', () => {
     expect(selectedTask?.textContent).toBe('选中日计划');
     selectedTask?.click();
     expect(onEdit).toHaveBeenCalledWith('task-A1');
-  });
-});
-
-describe('CalendarView', () => {
-  it('changes only planned date when a task is dropped on a day', async () => {
-    const index = new TaskIndex();
-    const service = { changePlannedDate: vi.fn().mockResolvedValue(undefined) };
-    const view = new CalendarView({} as WorkspaceLeaf, index, service, () => '2026-07-15');
-    await view.onOpen();
-    const day = view.containerEl.querySelector<HTMLElement>('[data-date="2026-07-15"]')!;
-    const event = new Event('drop', { bubbles: true, cancelable: true }) as DragEvent;
-    Object.defineProperty(event, 'dataTransfer', { value: { getData: () => 'task-A1' } });
-    day.dispatchEvent(event);
-    await Promise.resolve();
-    expect(service.changePlannedDate).toHaveBeenCalledWith('task-A1', '2026-07-15');
   });
 });
