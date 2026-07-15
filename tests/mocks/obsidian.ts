@@ -1,4 +1,10 @@
 export class Plugin {
+  app: unknown;
+  readonly registeredViews: Array<{ type: string; creator: unknown }> = [];
+  readonly registeredCommands: Array<{ id: string; name?: string; callback?: () => void }> = [];
+  readonly ribbonIcons: Array<{ icon: string; title: string; callback: () => void; element: HTMLElement }> = [];
+  readonly settingTabs: unknown[] = [];
+
   async loadData(): Promise<unknown> {
     return null;
   }
@@ -6,6 +12,35 @@ export class Plugin {
   async saveData(): Promise<void> {
     return undefined;
   }
+
+  registerView(type: string, creator: unknown): void {
+    this.registeredViews.push({ type, creator });
+  }
+
+  addCommand(command: { id: string; name?: string; callback?: () => void }): void {
+    this.registeredCommands.push(command);
+  }
+
+  addRibbonIcon(icon: string, title: string, callback: () => void): HTMLElement {
+    const element = document.createElement('div');
+    this.ribbonIcons.push({ icon, title, callback, element });
+    return element;
+  }
+
+  addSettingTab(tab: unknown): void {
+    this.settingTabs.push(tab);
+  }
+}
+
+export class TAbstractFile {
+  constructor(readonly path: string) {}
+}
+
+export class TFile extends TAbstractFile {}
+export class TFolder extends TAbstractFile {}
+
+export function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/^\//, '');
 }
 
 export class App {}

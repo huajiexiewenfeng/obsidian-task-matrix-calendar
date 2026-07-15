@@ -8,6 +8,21 @@
   min-height: 100%;
 }
 
+.task-matrix-calendar-ribbon[data-risk-count] { position: relative; }
+.task-matrix-calendar-ribbon[data-risk-count]::after {
+  content: attr(data-risk-count);
+  position: absolute;
+  inset: 1px 1px auto auto;
+  min-width: 14px;
+  padding: 1px 3px;
+  color: var(--text-on-accent);
+  background: var(--text-error);
+  border-radius: 999px;
+  font-size: 9px;
+  line-height: 1.2;
+  text-align: center;
+}
+
 .theme-light .task-matrix-calendar { --tmc-card-shadow: rgb(0 0 0 / 8%); }
 .theme-dark .task-matrix-calendar { --tmc-card-shadow: rgb(0 0 0 / 28%); }
 

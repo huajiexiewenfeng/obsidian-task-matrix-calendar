@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "install:vault": "node scripts/install-to-vault.mjs"
   },
   "dependencies": {
     "minimatch": "10.2.5"

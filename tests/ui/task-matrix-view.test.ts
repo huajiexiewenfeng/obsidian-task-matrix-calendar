@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import type { WorkspaceLeaf } from 'obsidian';
 import { describe, expect, it, vi } from 'vitest';
+import { makeTask } from '../../src/domain/task';
 import { TaskIndex } from '../../src/index/task-index';
 import { parseTaskFile } from '../../src/markdown/task-parser';
 import { TaskMatrixView } from '../../src/ui/task-matrix-view';
@@ -27,6 +28,7 @@ describe('TaskMatrixView', () => {
     index.replaceFile('任务/a.md', parseTaskFile('任务/a.md', source));
     const service = {
       transition: vi.fn(), complete: vi.fn(), changeQuadrant: vi.fn(), update: vi.fn(),
+      create: vi.fn().mockResolvedValue(makeTask({ id: 'task-N1', title: '界面内新任务' })),
     };
     const prompt = { chooseQuadrant: vi.fn().mockResolvedValue('important-urgent') };
     const view = new TaskMatrixView({} as WorkspaceLeaf, index, service, prompt, 3, () => '2026-07-15');
@@ -39,6 +41,11 @@ describe('TaskMatrixView', () => {
     }
     expect(view.containerEl.textContent).toContain('1/2');
     expect(view.containerEl.querySelector('[data-filter="query"]')).not.toBeNull();
+    const title = view.containerEl.querySelector<HTMLInputElement>('[data-role="quick-create-title"]')!;
+    title.value = '界面内新任务';
+    view.containerEl.querySelector<HTMLButtonElement>('[data-action="create"]')!.click();
+    await Promise.resolve();
+    expect(service.create).toHaveBeenCalledWith({ title: '界面内新任务' });
   });
 
   it('forces classification before starting or completing an unclassified task', async () => {

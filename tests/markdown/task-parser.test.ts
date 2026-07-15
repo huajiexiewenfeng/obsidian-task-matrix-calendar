@@ -18,7 +18,7 @@ describe('parseTaskFile', () => {
     ]);
     expect(result.tasks[0].task.childrenIds).toEqual(['task-01JZA2', 'task-01JZA3']);
     expect(result.tasks[1].task.parentId).toBe('task-01JZA1');
-    expect(result.tasks[0].task.tags).toEqual(['agent', '企业微信']);
+    expect(result.tasks[0].task.tags).toEqual(['Obsidian', '开源']);
     expect(result.tasks[0].task.plannedDate).toBe('2026-07-20');
     expect(result.tasks[0].task.dueDate).toBe('2026-07-31');
     expect(result.tasks[1].task.status).toBe('done');

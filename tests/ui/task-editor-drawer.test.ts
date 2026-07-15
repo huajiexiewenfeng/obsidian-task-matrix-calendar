@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
+import { makeTask } from '../../src/domain/task';
 import { parseTaskFile } from '../../src/markdown/task-parser';
 import { TaskEditorDrawer } from '../../src/ui/task-editor-drawer';
 
@@ -13,7 +14,10 @@ const source = [
 describe('TaskEditorDrawer', () => {
   it('renders fields and sends one typed update patch on save', async () => {
     const container = document.createElement('div');
-    const service = { update: vi.fn().mockResolvedValue(undefined) };
+    const service = {
+      update: vi.fn().mockResolvedValue(undefined),
+      create: vi.fn().mockResolvedValue(makeTask({ id: 'task-C1', title: '新增子任务' })),
+    };
     const trash = { moveToTrash: vi.fn().mockResolvedValue(undefined) };
     const locate = vi.fn();
     const drawer = new TaskEditorDrawer(container, service, trash, locate);
@@ -32,5 +36,9 @@ describe('TaskEditorDrawer', () => {
     }));
     container.querySelector<HTMLButtonElement>('[data-action="locate"]')!.click();
     expect(locate).toHaveBeenCalledWith('task-A1');
+    const childTitle = container.querySelector<HTMLInputElement>('[name="childTitle"]')!;
+    childTitle.value = '新增子任务';
+    container.querySelector<HTMLButtonElement>('[data-action="add-child"]')!.click();
+    expect(service.create).toHaveBeenCalledWith({ title: '新增子任务', parentId: 'task-A1' });
   });
 });

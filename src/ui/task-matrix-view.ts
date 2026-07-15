@@ -1,6 +1,6 @@
 import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
 import { classifyDateRisk } from '../domain/dates';
-import type { IndexedTask, TaskQuadrant, TaskStatus } from '../domain/task';
+import type { IndexedTask, TaskNode, TaskQuadrant, TaskStatus } from '../domain/task';
 import type { TaskIndex } from '../index/task-index';
 import type { ClassificationPromptPort } from '../services/external-checkbox-coordinator';
 import { TaskEditorDrawer, type TaskEditorServicePort } from './task-editor-drawer';
@@ -19,6 +19,7 @@ export interface TaskMatrixServicePort extends TaskEditorServicePort {
   transition(id: string, target: TaskStatus): Promise<unknown>;
   complete(id: string, quadrant?: Exclude<TaskQuadrant, 'unclassified'>): Promise<void>;
   changeQuadrant(id: string, quadrant: TaskQuadrant): Promise<void>;
+  create?(input: { title: string; parentId?: string }): Promise<TaskNode>;
 }
 
 type TodayProvider = () => string;
@@ -36,13 +37,17 @@ export class TaskMatrixView extends ItemView {
     private readonly prompt: ClassificationPromptPort,
     private readonly dueSoonDays: number,
     private readonly today: TodayProvider,
+    trash: { moveToTrash(taskId: string, deletedAt: string): Promise<void> } = {
+      moveToTrash: async () => undefined,
+    },
+    locate: (taskId: string) => void = () => undefined,
   ) {
     super(leaf);
     this.editor = new TaskEditorDrawer(
       this.editorElement,
       service,
-      { moveToTrash: async () => undefined },
-      () => undefined,
+      trash,
+      locate,
     );
   }
 
@@ -83,7 +88,17 @@ export class TaskMatrixView extends ItemView {
     create.type = 'button';
     create.textContent = '+ 新任务';
     create.dataset.action = 'create';
-    header.append(heading, create);
+    const createTitle = document.createElement('input');
+    createTitle.dataset.role = 'quick-create-title';
+    createTitle.placeholder = '输入标题后快速创建';
+    create.addEventListener('click', () => {
+      const title = createTitle.value.trim();
+      if (title && this.service.create) {
+        void this.run(() => this.service.create?.({ title }) ?? Promise.resolve());
+        createTitle.value = '';
+      }
+    });
+    header.append(heading, createTitle, create);
     main.append(header, this.renderFilters());
 
     const tasks = this.index

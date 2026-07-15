@@ -96,7 +96,7 @@ export class TaskMatrixCalendarSettingTab extends PluginSettingTab {
         }
         return;
       }
-      this.settingsPlugin.settings = next;
+      Object.assign(this.settingsPlugin.settings, next);
       void this.settingsPlugin.saveSettings().then(() => this.onSettingsChanged());
     });
     this.containerEl.append(save);

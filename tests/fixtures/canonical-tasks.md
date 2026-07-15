@@ -2,22 +2,22 @@
 
 <!-- obsidian-task-schema: 1 -->
 
-- [ ] 企业微信 smarthub-agent #task ^task-01JZA1
+- [ ] 发布开源插件 #task ^task-01JZA1
   - 状态:: 待办
   - 分类:: 重要不紧急
-  - 项目:: smarthub
-  - 标签:: agent, 企业微信, agent
+  - 项目:: task-matrix-calendar
+  - 标签:: Obsidian, 开源, Obsidian
   - 计划日期:: 2026-07-20
   - 截止日期:: 2026-07-31
-  - [x] 接入企业微信 #task ^task-01JZA2
+  - [x] 完成设计 #task ^task-01JZA2
     - 状态:: 已完成
     - 分类:: 重要不紧急
-    - 项目:: smarthub
-    - 标签:: agent, 企业微信
-  - [ ] 实现知识库问答 #task ^task-01JZA3
+    - 项目:: task-matrix-calendar
+    - 标签:: Obsidian, 开源
+  - [ ] 完善使用文档 #task ^task-01JZA3
     - 状态:: 进行中
     - 分类:: 重要不紧急
-    - 项目:: smarthub
-    - 标签:: agent, 企业微信
+    - 项目:: task-matrix-calendar
+    - 标签:: Obsidian, 开源
 
 任务块之后的普通段落必须保留。

@@ -2,6 +2,7 @@ import type { IndexedTask, TaskNode, TaskQuadrant, TaskStatus } from '../domain/
 
 export interface TaskEditorServicePort {
   update(id: string, patch: Partial<Omit<TaskNode, 'id' | 'childrenIds'>>): Promise<void>;
+  create?(input: { title: string; parentId?: string }): Promise<TaskNode>;
 }
 
 export interface TaskEditorTrashPort {
@@ -77,6 +78,27 @@ export class TaskEditorDrawer {
       field('计划日期', plannedDate), field('截止日期', dueDate), field('项目', project),
       field('标签', tags),
     );
+
+    if (this.service.create) {
+      const children = document.createElement('section');
+      const childHeading = document.createElement('h4');
+      childHeading.textContent = `子任务 · ${task.childrenIds.length}`;
+      const childTitle = input('childTitle', '');
+      childTitle.placeholder = '输入子任务标题';
+      const addChild = document.createElement('button');
+      addChild.type = 'button';
+      addChild.dataset.action = 'add-child';
+      addChild.textContent = '+ 添加子任务';
+      addChild.addEventListener('click', () => {
+        const value = childTitle.value.trim();
+        if (value && this.current) {
+          void this.service.create?.({ title: value, parentId: this.current.task.id });
+          childTitle.value = '';
+        }
+      });
+      children.append(childHeading, childTitle, addChild);
+      this.container.append(children);
+    }
 
     const controls = document.createElement('div');
     controls.className = 'tmc-drawer-actions';

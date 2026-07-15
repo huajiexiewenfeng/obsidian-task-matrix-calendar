@@ -66,6 +66,10 @@ export class TaskScanner {
     this.scannedPaths.add(normalized);
   }
 
+  isManagedPath(path: string): boolean {
+    return this.shouldScan(normalizeVaultPath(path));
+  }
+
   private async scanPath(indexPath: string, readPath: string): Promise<void> {
     this.hints?.getHints(indexPath);
     const source = await this.vault.read(readPath);

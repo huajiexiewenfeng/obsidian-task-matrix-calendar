@@ -15,7 +15,7 @@ describe('guarded task patches', () => {
     const parent = parsed.tasks[0];
     const children = parsed.tasks.slice(1).map((item) => item.task);
     const replacement = serializeTaskBlock(
-      { ...parent.task, title: '企业微信新版' },
+      { ...parent.task, title: '发布插件新版' },
       children,
       parent.location.indent,
       parent.location.eol,
@@ -24,9 +24,9 @@ describe('guarded task patches', () => {
     const result = replaceTaskBlock(source, parent, replacement);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.source).toContain('- [ ] 企业微信新版 #task ^task-01JZA1');
+      expect(result.source).toContain('- [ ] 发布插件新版 #task ^task-01JZA1');
       expect(result.source).toContain('任务块之后的普通段落必须保留。');
-      expect(result.source).not.toContain('企业微信 smarthub-agent');
+      expect(result.source).not.toContain('发布开源插件');
     }
   });
 
@@ -34,7 +34,7 @@ describe('guarded task patches', () => {
     const source = canonicalSource();
     const parsed = parseTaskFile('任务/任务收件箱.md', source);
     const parent = parsed.tasks[0];
-    const changedSource = source.replace('企业微信 smarthub-agent', '外部编辑后的标题');
+    const changedSource = source.replace('发布开源插件', '外部编辑后的标题');
 
     expect(replaceTaskBlock(changedSource, parent, 'replacement')).toEqual({
       ok: false,
