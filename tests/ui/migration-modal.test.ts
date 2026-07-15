@@ -29,6 +29,11 @@ const plan: MigrationPlan = {
           quadrant: 'unclassified',
           legacyPriority: 'P1',
         }),
+        recognition: {
+          kind: 'checkbox' as const,
+          reason: 'Markdown 复选框' as const,
+          defaultSelected: true,
+        },
         confidence: 'high' as const,
       },
       {
@@ -38,6 +43,11 @@ const plan: MigrationPlan = {
         endLine: 3,
         originalText: '- 中置信旧任务',
         proposed: makeTask({ id: 'task-A2', title: '中置信旧任务' }),
+        recognition: {
+          kind: 'list-item' as const,
+          reason: '普通列表，仅作为候选' as const,
+          defaultSelected: false,
+        },
         confidence: 'medium' as const,
       },
     ]],
@@ -48,7 +58,12 @@ const plan: MigrationPlan = {
       endLine: 5,
       originalText: '低置信旧任务 P4',
       proposed: makeTask({ id: 'task-A3', title: '低置信旧任务', legacyPriority: 'P4' }),
-      confidence: 'low' as const,
+      recognition: {
+        kind: 'list-item' as const,
+        reason: '普通列表，仅作为候选' as const,
+        defaultSelected: false,
+      },
+      confidence: 'medium' as const,
     }]],
   ]),
 };

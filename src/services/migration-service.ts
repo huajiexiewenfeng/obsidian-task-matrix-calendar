@@ -1,32 +1,31 @@
-import { makeTask, type LegacyPriority, type TaskNode, type TaskStatus } from '../domain/task';
 import { createTaskId } from '../domain/id';
+import type { TaskNode } from '../domain/task';
 import { validateTaskDraft } from '../domain/rules';
 import { isManagedMarkdownPath } from '../index/managed-path';
-import { parseTaskFile } from '../markdown/task-parser';
 import { ensureSchemaMarker, serializeTaskBlock } from '../markdown/task-serializer';
 import type { TaskRepository } from '../persistence/obsidian-task-repository';
 import type { VaultProcessPort } from '../persistence/vault-port';
 import { normalizeVaultPath, type TaskMatrixCalendarSettings } from '../settings';
+import {
+  extractLegacyCandidates,
+  type MigrationCandidate,
+} from './legacy-task-candidates';
 
-export type MigrationConfidence = 'high' | 'medium' | 'low';
+export type { MigrationCandidate } from './legacy-task-candidates';
 
-export interface MigrationCandidate {
-  candidateId: string;
-  sourcePath: string;
-  startLine: number;
-  endLine: number;
-  originalText: string;
-  proposed: TaskNode;
-  confidence: MigrationConfidence;
-}
+// TODO(Task 5): remove confidence after the migration modal consumes recognition directly.
+export type MigrationPlanCandidate = MigrationCandidate & {
+  readonly confidence: 'high' | 'medium';
+};
 
 export interface MigrationPlan {
-  files: Map<string, MigrationCandidate[]>;
+  files: Map<string, MigrationPlanCandidate[]>;
   failures: Map<string, string>;
   createdAt: string;
 }
 
 export type MigrationErrorCode =
+  | 'invalid-source'
   | 'invalid-candidate'
   | 'stale-plan'
   | 'verification-failed'
@@ -57,57 +56,6 @@ interface SelectedCandidate {
 
 type MigrationSelections = ReadonlyMap<string, TaskNode>;
 
-interface DateHeading {
-  date: string;
-}
-
-const STATUS_MARKERS: Array<[RegExp, TaskStatus]> = [
-  [/（完成）|\(完成\)/, 'done'],
-  [/（进行中）|\(进行中\)/, 'in-progress'],
-  [/（暂停）|\(暂停\)/, 'paused'],
-];
-
-function headingDate(line: string): DateHeading | null {
-  const dashed = /^#{1,6}\s+(\d{4})-(\d{1,2})-(\d{1,2})\s*$/.exec(line);
-  if (dashed) {
-    return {
-      date: `${dashed[1]}-${dashed[2].padStart(2, '0')}-${dashed[3].padStart(2, '0')}`,
-    };
-  }
-  const compact = /^#{1,6}\s+(\d{4})(\d{2})(\d{2})\s*$/.exec(line);
-  return compact ? { date: `${compact[1]}-${compact[2]}-${compact[3]}` } : null;
-}
-
-function statusFromLine(line: string, checkbox?: string): TaskStatus {
-  if (checkbox?.toLowerCase() === 'x') return 'done';
-  for (const [pattern, status] of STATUS_MARKERS) {
-    if (pattern.test(line)) return status;
-  }
-  return 'todo';
-}
-
-function legacyPriority(line: string): LegacyPriority | undefined {
-  return /\b(P[0-4])\b/.exec(line)?.[1] as LegacyPriority | undefined;
-}
-
-function cleanTitle(line: string): string {
-  return line
-    .replace(/^\s*(?:[-*+]\s+\[[ xX]\]|[-*+]|\d+[.)])\s+/, '')
-    .replace(/（(?:完成|进行中|暂停)）|\((?:完成|进行中|暂停)\)/g, '')
-    .replace(/\s*\bP[0-4]\b\s*/g, ' ')
-    .trim()
-    .replace(/\s+/g, ' ');
-}
-
-function candidateConfidence(line: string): MigrationConfidence | null {
-  if (/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line) || STATUS_MARKERS.some(([pattern]) => pattern.test(line))) {
-    return 'high';
-  }
-  if (/^\s*(?:[-*+]\s+|\d+[.)]\s+)/.test(line)) return 'medium';
-  if (/\bP[0-4]\b/.test(line)) return 'low';
-  return null;
-}
-
 function backupTimestamp(value: string): string {
   return value.replace(/[:.]/g, '-');
 }
@@ -121,69 +69,52 @@ export class MigrationService {
     private readonly now: Clock = () => new Date().toISOString(),
   ) {}
 
-  async preview(): Promise<MigrationPlan> {
-    const files = new Map<string, MigrationCandidate[]>();
-    const failures = new Map<string, string>();
-    const eligiblePaths = new Map<string, string>();
+  listEligibleFiles(): string[] {
+    const paths = new Map<string, string>();
     for (const path of this.vault.listMarkdownPaths()) {
       const normalized = normalizeVaultPath(path);
       if (!isManagedMarkdownPath(normalized, this.settings)) continue;
       const key = normalized.toLocaleLowerCase();
-      if (!eligiblePaths.has(key)) eligiblePaths.set(key, normalized);
+      if (!paths.has(key)) paths.set(key, normalized);
+    }
+    return [...paths.values()].sort((left, right) =>
+      left.localeCompare(right, 'zh-CN-u-co-stroke'),
+    );
+  }
+
+  async preview(paths: readonly string[] = []): Promise<MigrationPlan> {
+    const eligible = new Map(
+      this.listEligibleFiles().map((path) => [path.toLocaleLowerCase(), path]),
+    );
+    const selected = new Map<string, string>();
+    for (const requested of paths) {
+      const normalized = normalizeVaultPath(requested);
+      const actual = eligible.get(normalized.toLocaleLowerCase());
+      if (!actual) {
+        throw new MigrationError(
+          'invalid-source',
+          '所选文件不在任务扫描目录内。',
+          normalized,
+        );
+      }
+      selected.set(actual.toLocaleLowerCase(), actual);
     }
 
-    for (const path of eligiblePaths.values()) {
-      let source: string;
+    const files = new Map<string, MigrationPlanCandidate[]>();
+    const failures = new Map<string, string>();
+    for (const path of selected.values()) {
       try {
-        source = await this.vault.read(path);
+        const source = await this.vault.read(path);
+        files.set(
+          path,
+          extractLegacyCandidates(path, source, this.makeId).map((candidate) => ({
+            ...candidate,
+            confidence: candidate.recognition.kind === 'checkbox' ? 'high' : 'medium',
+          })),
+        );
       } catch (error) {
         failures.set(path, error instanceof Error ? error.message : String(error));
-        continue;
       }
-      const lines = source.split(/\r\n|\n/);
-      const candidates: MigrationCandidate[] = [];
-      const managedLines = new Set<number>();
-      for (const indexed of parseTaskFile(path, source).tasks) {
-        for (
-          let line = indexed.location.startLine;
-          line <= indexed.location.endLine;
-          line += 1
-        ) {
-          managedLines.add(line);
-        }
-      }
-      let activeDate: string | undefined;
-      for (let line = 0; line < lines.length; line += 1) {
-        const heading = headingDate(lines[line]);
-        if (heading) {
-          activeDate = heading.date;
-          continue;
-        }
-        if (managedLines.has(line)) continue;
-        if (!activeDate || !lines[line].trim()) continue;
-        const confidence = candidateConfidence(lines[line]);
-        if (!confidence) continue;
-        const checkbox = /^\s*[-*+]\s+\[([ xX])\]/.exec(lines[line])?.[1];
-        const title = cleanTitle(lines[line]);
-        if (!title) continue;
-        candidates.push({
-          candidateId: `migration:${path}:${line}`,
-          sourcePath: path,
-          startLine: line,
-          endLine: line,
-          originalText: lines[line],
-          proposed: makeTask({
-            id: this.makeId(),
-            title,
-            status: statusFromLine(lines[line], checkbox),
-            quadrant: 'unclassified',
-            plannedDate: activeDate,
-            legacyPriority: legacyPriority(lines[line]),
-          }),
-          confidence,
-        });
-      }
-      files.set(path, candidates);
     }
     return { files, failures, createdAt: this.now() };
   }
