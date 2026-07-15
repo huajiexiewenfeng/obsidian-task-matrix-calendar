@@ -55,3 +55,11 @@ export class Modal {
 export class Notice {
   constructor(readonly message: string) {}
 }
+
+export class PluginSettingTab {
+  readonly containerEl = document.createElement('div');
+
+  constructor(readonly app: App, readonly plugin: Plugin) {}
+
+  display(): void {}
+}
