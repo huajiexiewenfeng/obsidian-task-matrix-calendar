@@ -602,8 +602,8 @@ git commit -m "feat: unify task and calendar workspace"
 **Interfaces:**
 - Produces: `isManagedMarkdownPath(path, settings): boolean`.
 - Changes: `VaultProcessPort.listMarkdownPaths(): string[]`.
-- Changes: `MigrationService.preview(): Promise<MigrationPlan>` with no path argument.
-- Changes: `MigrationService.apply(plan, selections: ReadonlyMap<string, TaskNode>): Promise<void>`.
+- Produces: primary `MigrationService.preview(): Promise<MigrationPlan>` automatic discovery path; keep a temporary optional path argument so the old modal/main wiring compiles until Tasks 8-9.
+- Produces: primary `MigrationService.apply(plan, selections: ReadonlyMap<string, TaskNode>): Promise<void>`; keep a temporary `Set<string>` compatibility branch for the old modal until Task 8.
 - Adds: `MigrationPlan.failures: Map<string, string>`.
 
 - [ ] **Step 1: Write failing managed-path and migration tests**
@@ -673,6 +673,8 @@ if (managedLines.has(line)) continue;
 
 Store read failures in `plan.failures` and continue scanning remaining files.
 
+During this intermediate task, an explicitly supplied legacy path list may still be accepted for the unchanged old modal/main call chain, but zero-argument preview must be the tested primary behavior and must enumerate/filter `vault.listMarkdownPaths()` itself.
+
 - [ ] **Step 5: Apply selected corrected values safely**
 
 Select by candidate ID, but preserve the candidate-generated ID regardless of edited input:
@@ -737,6 +739,8 @@ Expected: FAIL because defaults, full corrections, and result states are missing
 Maintain `selected: Set<string>` and `corrections: Map<string, TaskNode>`. Initialize selection with only `confidence === 'high'`. Render title, details textarea, status, start date, due date, quadrant, and legacy priority inputs. Every input updates a copied `TaskNode` in `corrections`; do not mutate `MigrationPlan`.
 
 Before building `selectedCorrections`, normalize both editable date fields with `normalizeDateInput`. If either value is invalid, set `aria-invalid="true"`, render an inline error for that candidate, and return without calling `apply()`.
+
+After this modal uses the corrected-value `Map`, remove the temporary `Set<string>` compatibility branch from `MigrationService.apply`. Keep an optional ignored argument on `MigrationModal.preview(_legacyPaths?: string[])` only until Task 9 updates the existing command callback; zero-argument preview remains the real behavior.
 
 The confirm handler must be:
 
@@ -839,6 +843,8 @@ async activateTaskWorkspace(mode: TaskWorkspaceMode): Promise<void> {
 ```
 
 Ribbon opens task mode. The command-palette migration action calls zero-argument `migrationModal.preview()`.
+
+Remove the remaining optional legacy preview argument from `MigrationModal.preview` and `MigrationService.preview` after the command callback is switched, so the final public API is strictly zero-argument.
 
 After `main.ts` no longer imports the old views, remove the compatibility `CalendarView`/`CALENDAR_VIEW_TYPE` wrapper while retaining `buildMonthModel` and `renderCalendarPanel`. Delete the old matrix view, editor drawer, and their tests in the same commit. Verify no production references remain:
 
