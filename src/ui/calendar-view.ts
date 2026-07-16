@@ -1,3 +1,4 @@
+import { setIcon } from 'obsidian';
 import type { TaskNode } from '../domain/task';
 
 export interface CalendarEntry {
@@ -93,17 +94,20 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
   host.classList.add('task-matrix-calendar', 'tmc-calendar-view');
 
   const header = document.createElement('header');
+  header.className = 'tmc-calendar-toolbar';
   const previous = document.createElement('button');
   previous.type = 'button';
   previous.dataset.action = 'previous-month';
-  previous.textContent = '‹';
+  previous.setAttribute('aria-label', '上个月');
+  setIcon(previous, 'chevron-left');
   previous.addEventListener('click', () => options.onChangeMonth(-1));
   const title = document.createElement('h2');
   title.textContent = `${options.cursor.getUTCFullYear()} 年 ${options.cursor.getUTCMonth() + 1} 月`;
   const next = document.createElement('button');
   next.type = 'button';
   next.dataset.action = 'next-month';
-  next.textContent = '›';
+  next.setAttribute('aria-label', '下个月');
+  setIcon(next, 'chevron-right');
   next.addEventListener('click', () => options.onChangeMonth(1));
   header.append(previous, title, next);
   host.append(header);
@@ -146,6 +150,8 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
   }
   host.append(grid);
 
+  const panels = document.createElement('aside');
+  panels.className = 'tmc-calendar-panels';
   const taskById = new Map(options.tasks.map((task) => [task.id, task]));
   const selectedDay = document.createElement('section');
   selectedDay.dataset.role = 'selected-day';
@@ -164,7 +170,7 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
     const task = taskById.get(entry.taskId);
     if (task) selectedDay.append(createTaskButton(task.id, task.title, options.onEdit));
   }
-  host.append(selectedDay);
+  panels.append(selectedDay);
 
   const unscheduled = document.createElement('section');
   unscheduled.dataset.role = 'unscheduled';
@@ -174,5 +180,6 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
   for (const task of options.tasks.filter((item) => !item.plannedDate && !item.dueDate)) {
     unscheduled.append(createTaskButton(task.id, task.title, options.onEdit));
   }
-  host.append(unscheduled);
+  panels.append(unscheduled);
+  host.append(panels);
 }

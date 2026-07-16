@@ -19,10 +19,19 @@ describe('plugin scaffold', () => {
     for (const selector of [
       '.tmc-workspace-header',
       '.tmc-filter-chip',
+      '.tmc-filter-controls',
+      '.tmc-filter-active',
+      '.tmc-task-section-header',
+      '.tmc-task-card-main',
+      '.tmc-form-grid',
       '.tmc-form-section',
       '.tmc-import-progress',
       '.tmc-import-evidence',
       '.tmc-import-actions',
+      '.tmc-import-review-workspace',
+      '.tmc-import-candidate-list',
+      '.tmc-import-editor-panel',
+      '.tmc-calendar-panels',
       ':focus-visible',
     ]) {
       expect(styles).toContain(selector);
@@ -71,15 +80,16 @@ describe('plugin scaffold', () => {
     }
   });
 
-  it('keeps the import correction disclosure across content columns and resets it on mobile', () => {
+  it('keeps the import wizard within the viewport and splits review into two scrollable panes', () => {
     const styles = readFileSync('styles.css', 'utf8');
 
     expect(styles).toMatch(
-      /\.tmc-import-candidate-correction\s*\{[^}]*grid-column:\s*2\s*\/\s*-1;[^}]*min-width:\s*0;/s,
+      /\.tmc-import-wizard\s*\{[^}]*width:\s*min\(1240px,\s*calc\(100vw - 48px\)\)/s,
     );
     expect(styles).toMatch(
-      /@media \(max-width: 650px\)\s*\{[\s\S]*?\.tmc-import-candidate-correction\s*\{[^}]*grid-column:\s*1;/,
+      /\.tmc-import-review-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(320px,\s*38%\)\s+minmax\(0,\s*62%\)/s,
     );
+    expect(styles).toContain('overflow-x: hidden');
   });
 
   it('documents the released workspace, task form, and migration behavior', () => {

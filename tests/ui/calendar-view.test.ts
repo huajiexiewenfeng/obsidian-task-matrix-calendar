@@ -54,6 +54,12 @@ describe('renderCalendarPanel', () => {
   it('renders 42 day cells with selected-day and exactly unscheduled tasks', () => {
     const { host } = render();
 
+    expect(host.querySelector('.tmc-calendar-toolbar [data-action="previous-month"]'))
+      .not.toBeNull();
+    expect(host.querySelector('.tmc-calendar-panels [data-role="selected-day"]'))
+      .not.toBeNull();
+    expect(host.querySelector('.tmc-calendar-panels [data-role="unscheduled"]'))
+      .not.toBeNull();
     expect(host.querySelectorAll('[data-date]')).toHaveLength(42);
     expect(host.querySelector('[data-date="2026-07-15"]')?.classList.contains('is-selected')).toBe(true);
     expect(host.querySelector('[data-role="selected-day"]')?.textContent).toContain('2026-07-15');
