@@ -64,14 +64,21 @@ afterEach(() => {
 });
 
 describe('TaskFormModal', () => {
-  it('renders grouped content, execution, collapsed metadata, and fixed actions', () => {
+  it('renders grouped content, paired execution fields, visible metadata, and fixed actions', () => {
     const modal = new TaskFormModal({} as App, service(), () => '2026-07-15');
     modal.openCreate();
 
+    expect(modal.contentEl.querySelector('.tmc-form-body')).not.toBeNull();
     expect(modal.contentEl.querySelector('[data-section="content"]')).not.toBeNull();
+    expect(modal.contentEl.querySelector(
+      '[data-section="content"] .tmc-form-field-wide [name="details"]',
+    )).toBeInstanceOf(HTMLTextAreaElement);
     expect(modal.contentEl.querySelector('[data-section="execution"]')).not.toBeNull();
-    const metadata = modal.contentEl.querySelector<HTMLDetailsElement>('[data-section="metadata"]')!;
-    expect(metadata.open).toBe(false);
+    expect(modal.contentEl.querySelector('[data-section="execution"] .tmc-form-grid'))
+      .not.toBeNull();
+    const metadata = modal.contentEl.querySelector<HTMLElement>('[data-section="metadata"]')!;
+    expect(metadata.tagName).toBe('SECTION');
+    expect(metadata.querySelector('.tmc-form-grid')).not.toBeNull();
     expect(modal.contentEl.querySelector('[data-role="form-actions"]')).not.toBeNull();
     expect(input(modal, 'plannedDate').value).toBe('2026-07-15');
     expect(select(modal, 'status').value).toBe('todo');

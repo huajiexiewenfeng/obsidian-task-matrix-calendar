@@ -58,8 +58,9 @@ function select<T extends string>(
   return element;
 }
 
-function field(label: string, control: HTMLElement): HTMLLabelElement {
+function field(label: string, control: HTMLElement, wide = false): HTMLLabelElement {
   const wrapper = document.createElement('label');
+  wrapper.className = wide ? 'tmc-form-field tmc-form-field-wide' : 'tmc-form-field';
   const caption = document.createElement('span');
   caption.textContent = label;
   wrapper.append(caption, control);
@@ -126,24 +127,36 @@ export class TaskFormModal extends Modal {
     const project = input('project', task?.project ?? '');
     const tags = input('tags', task?.tags.join(', ') ?? '');
 
-    form.append(
-      section('content', '任务内容', field('任务标题', title), field('详情', details)),
-      section(
-        'execution',
-        '执行安排',
-        field('状态', status),
-        field('四象限', quadrant),
-        field('开始日期', plannedDate),
-        field('截止日期', dueDate),
-      ),
+    const content = section('content', '任务内容');
+    const contentGrid = document.createElement('div');
+    contentGrid.className = 'tmc-form-grid';
+    contentGrid.append(
+      field('任务标题', title, true),
+      field('详情', details, true),
     );
+    content.append(contentGrid);
 
-    const metadata = document.createElement('details');
-    metadata.dataset.section = 'metadata';
-    const summary = document.createElement('summary');
-    summary.textContent = '项目与标签';
-    metadata.append(summary, field('项目', project), field('标签', tags));
-    form.append(metadata);
+    const execution = section('execution', '执行安排');
+    const executionGrid = document.createElement('div');
+    executionGrid.className = 'tmc-form-grid';
+    executionGrid.append(
+      field('状态', status),
+      field('四象限', quadrant),
+      field('开始日期', plannedDate),
+      field('截止日期', dueDate),
+    );
+    execution.append(executionGrid);
+
+    const metadata = section('metadata', '项目与标签');
+    const metadataGrid = document.createElement('div');
+    metadataGrid.className = 'tmc-form-grid';
+    metadataGrid.append(field('项目', project), field('标签', tags));
+    metadata.append(metadataGrid);
+
+    const body = document.createElement('div');
+    body.className = 'tmc-form-body';
+    body.append(content, execution, metadata);
+    form.append(body);
 
     const save = document.createElement('button');
     save.type = 'submit';
