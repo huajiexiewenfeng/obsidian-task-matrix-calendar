@@ -123,13 +123,13 @@ describe('TaskWorkspaceView', () => {
 
     const sections = view.containerEl.querySelectorAll<HTMLElement>('.tmc-task-section');
     expect(sections).toHaveLength(5);
-    for (const section of sections) {
+    Array.from(sections).forEach((section) => {
       const list = section.querySelector<HTMLElement>(':scope > [data-role="task-list"]');
       expect(list).not.toBeNull();
       expect(list?.querySelectorAll(':scope > .tmc-task-card').length).toBe(
         Number(section.querySelector('[data-role="section-count"]')?.textContent),
       );
-    }
+    });
 
     const emptySection = view.containerEl.querySelector<HTMLElement>(
       '[data-quadrant="not-important-urgent"]',
