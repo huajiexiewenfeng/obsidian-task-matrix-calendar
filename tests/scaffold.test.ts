@@ -131,6 +131,20 @@ describe('plugin scaffold', () => {
     );
   });
 
+  it('maps calendar entries to the same four task status colors', () => {
+    const styles = readFileSync('styles.css', 'utf8');
+
+    for (const status of ['todo', 'in-progress', 'paused', 'done']) {
+      expect(styles).toContain(`.tmc-calendar-entry[data-status="${status}"]`);
+    }
+    expect(styles).toMatch(
+      /\.tmc-calendar-entry\s*\{[^}]*--tmc-status-color:\s*var\(--text-muted\);[^}]*border-left:\s*3px\s+solid\s+var\(--tmc-status-color\)/s,
+    );
+    expect(styles).toMatch(
+      /\.tmc-calendar-due-marker\s*\{[^}]*color:\s*var\(--text-error\)\s*!important;/s,
+    );
+  });
+
   it('sizes task and import dialogs from the outer Obsidian modal', () => {
     const styles = readFileSync('styles.css', 'utf8');
 

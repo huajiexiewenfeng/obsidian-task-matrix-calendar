@@ -373,21 +373,25 @@
 }
 
 .tmc-task-card[data-status="todo"],
+.tmc-calendar-entry[data-status="todo"],
 .tmc-status-todo {
   --tmc-status-color: var(--text-muted);
 }
 
 .tmc-task-card[data-status="in-progress"],
+.tmc-calendar-entry[data-status="in-progress"],
 .tmc-status-in-progress {
   --tmc-status-color: var(--interactive-accent);
 }
 
 .tmc-task-card[data-status="paused"],
+.tmc-calendar-entry[data-status="paused"],
 .tmc-status-paused {
   --tmc-status-color: var(--color-orange);
 }
 
 .tmc-task-card[data-status="done"],
+.tmc-calendar-entry[data-status="done"],
 .tmc-status-done {
   --tmc-status-color: var(--color-green);
 }
@@ -774,6 +778,7 @@
 }
 
 .tmc-calendar-entry {
+  --tmc-status-color: var(--text-muted);
   display: block;
   width: 100%;
   min-height: 24px !important;
@@ -781,8 +786,9 @@
   margin-top: 4px;
   overflow: hidden;
   color: var(--tmc-text) !important;
-  background: var(--tmc-surface-muted) !important;
-  border-color: var(--tmc-surface-muted) !important;
+  background: color-mix(in srgb, var(--tmc-status-color) 10%, var(--tmc-surface)) !important;
+  border-color: color-mix(in srgb, var(--tmc-status-color) 32%, var(--tmc-border)) !important;
+  border-left: 3px solid var(--tmc-status-color) !important;
   font-size: var(--font-ui-smaller) !important;
   text-align: left;
   text-overflow: ellipsis;
