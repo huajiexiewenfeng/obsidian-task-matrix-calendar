@@ -138,7 +138,7 @@ describe('plugin scaffold', () => {
       expect(styles).toContain(`.tmc-calendar-entry[data-status="${status}"]`);
     }
     expect(styles).toMatch(
-      /\.tmc-calendar-entry\s*\{[^}]*--tmc-status-color:\s*var\(--text-muted\);[^}]*border-left:\s*3px\s+solid\s+var\(--tmc-status-color\)/s,
+      /\.tmc-calendar-entry\s*\{[^}]*--tmc-status-color:\s*var\(--text-muted\);[^}]*min-height:\s*28px\s*!important;[^}]*border-left:\s*4px\s+solid\s+var\(--tmc-status-color\)\s*!important;[^}]*box-shadow:\s*0\s+1px\s+3px\s+var\(--tmc-shadow\)/s,
     );
     expect(styles).toMatch(
       /\.tmc-calendar-due-marker\s*\{[^}]*color:\s*var\(--text-error\)\s*!important;/s,

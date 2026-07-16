@@ -781,18 +781,27 @@
   --tmc-status-color: var(--text-muted);
   display: block;
   width: 100%;
-  min-height: 24px !important;
-  padding: 2px 5px !important;
+  min-height: 28px !important;
+  padding: 3px 6px !important;
   margin-top: 4px;
   overflow: hidden;
   color: var(--tmc-text) !important;
   background: color-mix(in srgb, var(--tmc-status-color) 10%, var(--tmc-surface)) !important;
   border-color: color-mix(in srgb, var(--tmc-status-color) 32%, var(--tmc-border)) !important;
-  border-left: 3px solid var(--tmc-status-color) !important;
+  border-left: 4px solid var(--tmc-status-color) !important;
   font-size: var(--font-ui-smaller) !important;
+  line-height: 1.25;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+  box-shadow: 0 1px 3px var(--tmc-shadow);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.tmc-calendar-entry:hover,
+.tmc-calendar-entry:focus-visible {
+  border-left-color: var(--tmc-status-color) !important;
+  box-shadow: 0 2px 6px var(--tmc-shadow);
 }
 
 .tmc-calendar-due-marker {

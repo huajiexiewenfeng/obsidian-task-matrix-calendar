@@ -4,7 +4,7 @@ import { makeTask } from '../../src/domain/task';
 import { buildMonthModel, renderCalendarPanel } from '../../src/ui/calendar-view';
 
 describe('buildMonthModel', () => {
-  it('builds 42 cells with planned cards and deduplicated due markers', () => {
+  it('builds only the five weeks needed by July with planned cards and deduplicated due markers', () => {
     const tasks = [
       makeTask({ id: 'task-A1', title: '计划', plannedDate: '2026-07-10', status: 'in-progress' }),
       makeTask({ id: 'task-A2', title: '截止', dueDate: '2026-07-11', status: 'paused' }),
@@ -15,7 +15,7 @@ describe('buildMonthModel', () => {
 
     const model = buildMonthModel(2026, 6, tasks, '2026-07-15');
 
-    expect(model).toHaveLength(42);
+    expect(model).toHaveLength(35);
     expect(model.find((cell) => cell.date === '2026-07-10')?.entries).toMatchObject([
       { taskId: 'task-A1', kind: 'card', status: 'in-progress' },
     ]);
@@ -26,6 +26,14 @@ describe('buildMonthModel', () => {
     expect(model.find((cell) => cell.date === '2026-07-12')?.entries[0]).toMatchObject({ deadline: true });
     expect(model.find((cell) => cell.date === '2026-07-15')?.entries).toMatchObject([{ taskId: 'task-A4', kind: 'due-marker' }]);
     expect(model.flatMap((cell) => cell.entries).some((entry) => entry.taskId === 'task-A5')).toBe(false);
+  });
+
+  it('keeps six weeks for a month whose dates require them', () => {
+    const model = buildMonthModel(2026, 7, [], '2026-08-01');
+
+    expect(model).toHaveLength(42);
+    expect(model[0]?.date).toBe('2026-07-26');
+    expect(model.at(-1)?.date).toBe('2026-09-05');
   });
 });
 
@@ -55,7 +63,7 @@ describe('renderCalendarPanel', () => {
     return { host, ...callbacks };
   }
 
-  it('renders 42 day cells with selected-day and exactly unscheduled tasks', () => {
+  it('renders the required day cells with selected-day and exactly unscheduled tasks', () => {
     const { host } = render();
 
     expect(host.querySelector('.tmc-calendar-toolbar [data-action="previous-month"]'))
@@ -64,7 +72,7 @@ describe('renderCalendarPanel', () => {
       .not.toBeNull();
     expect(host.querySelector('.tmc-calendar-panels [data-role="unscheduled"]'))
       .not.toBeNull();
-    expect(host.querySelectorAll('[data-date]')).toHaveLength(42);
+    expect(host.querySelectorAll('[data-date]')).toHaveLength(35);
     expect(host.querySelector('[data-date="2026-07-15"]')?.classList.contains('is-selected')).toBe(true);
     expect(host.querySelector('[data-role="selected-day"]')?.textContent).toContain('2026-07-15');
     expect(host.querySelector('[data-role="selected-day"]')?.textContent).toContain('选中日计划');

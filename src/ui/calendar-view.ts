@@ -29,7 +29,10 @@ export function buildMonthModel(
   const first = new Date(Date.UTC(year, month, 1));
   const start = new Date(first);
   start.setUTCDate(first.getUTCDate() - first.getUTCDay());
-  return Array.from({ length: 42 }, (_, offset) => {
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const requiredCells = Math.ceil((first.getUTCDay() + daysInMonth) / 7) * 7;
+  const visibleCells = Math.max(35, requiredCells);
+  return Array.from({ length: visibleCells }, (_, offset) => {
     const date = new Date(start);
     date.setUTCDate(start.getUTCDate() + offset);
     const value = isoDate(date);
