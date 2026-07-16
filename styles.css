@@ -93,6 +93,7 @@
 }
 
 .tmc-task-workspace {
+  container-type: inline-size;
   width: min(100%, 1480px);
   padding: 20px;
   margin-inline: auto;
@@ -1084,5 +1085,64 @@
 
   .tmc-calendar-entry {
     font-size: var(--font-ui-smaller) !important;
+  }
+}
+
+@container (max-width: 900px) {
+  .tmc-workspace-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .tmc-workspace-heading {
+    grid-column: 1 / -1;
+  }
+
+  .tmc-filter-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tmc-search-field {
+    grid-column: 1 / -1;
+  }
+
+  .tmc-quadrant-grid,
+  .tmc-form-grid,
+  .tmc-calendar-view {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tmc-form-field-wide {
+    grid-column: 1;
+  }
+
+  .tmc-calendar-grid,
+  .tmc-calendar-panels {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .tmc-calendar-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 760px) {
+  .tmc-workspace-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tmc-workspace-actions,
+  .tmc-workspace-modes {
+    width: 100%;
+  }
+
+  .tmc-workspace-actions button,
+  .tmc-workspace-modes button {
+    flex: 1 1 0;
+  }
+
+  .tmc-filter-controls,
+  .tmc-calendar-panels {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

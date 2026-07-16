@@ -92,6 +92,15 @@ describe('plugin scaffold', () => {
     expect(styles).toContain('overflow-x: hidden');
   });
 
+  it('reflows controls from the task pane width instead of only the app viewport', () => {
+    const styles = readFileSync('styles.css', 'utf8');
+
+    expect(styles).toMatch(/\.tmc-task-workspace\s*\{[^}]*container-type:\s*inline-size;/s);
+    expect(styles).toMatch(
+      /@container\s*\(max-width:\s*900px\)\s*\{[\s\S]*?\.tmc-filter-controls\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
+    );
+  });
+
   it('documents the released workspace, task form, and migration behavior', () => {
     const readme = readFileSync('README.md', 'utf8');
 
