@@ -13,7 +13,7 @@ const source = [
 ].join('\n');
 
 describe('renderTaskCard', () => {
-  it('renders readable semantics, progress, source and actions', () => {
+  it('renders compact execution semantics and contextual actions', () => {
     const container = document.createElement('div');
     const indexed = parseTaskFile('任务/项目.md', source).tasks[0];
     indexed.task.details = '第一行详情\n第二行详情';
@@ -21,25 +21,55 @@ describe('renderTaskCard', () => {
 
     const card = renderTaskCard(container, indexed, { done: 2, total: 4 }, 'due-today', actions);
 
+    expect(card.dataset.status).toBe('in-progress');
     expect(card.textContent).toContain('长期任务');
-    expect(card.textContent).toContain('进行中');
-    expect(card.textContent).toContain('2/4');
-    expect(card.textContent).toContain('今天截止');
-    expect(card.textContent).toContain('任务/项目.md');
-    expect(card.textContent).toContain('开源插件');
-    expect(card.textContent).toContain('开发');
+    expect(card.querySelector('.tmc-status-in-progress')?.textContent).toBe('进行中');
+    expect(card.querySelector('.tmc-progress')?.textContent).toBe('2/4');
+    expect(card.querySelector('.tmc-risk-due-today')?.textContent).toBe('今天截止');
+    expect(card.textContent).not.toContain('来源：');
+    expect(card.textContent).not.toContain('标签：');
     const description = card.querySelector('.tmc-task-description');
     expect(description?.textContent).toBe('第一行详情\n第二行详情');
     expect(description?.tagName).toBe('P');
     expect(card.querySelector('.tmc-task-card-main .tmc-task-title')).not.toBeNull();
-    expect(card.querySelector('.tmc-task-card-meta')).not.toBeNull();
-    const progressBar = card.querySelector('.tmc-task-progress-bar');
-    expect(progressBar?.getAttribute('aria-valuenow')).toBe('2');
-    expect(progressBar?.getAttribute('aria-valuemax')).toBe('4');
-    const edit = card.querySelector('[data-action="open"]') as HTMLButtonElement;
+    expect(card.querySelector('.tmc-task-details')?.textContent)
+      .toBe('项目：开源插件 · 截止：2026-07-15');
+
+    const trigger = card.querySelector<HTMLButtonElement>('[data-action="menu"]')!;
+    const menu = card.querySelector<HTMLElement>('.tmc-task-actions')!;
+    expect(trigger.getAttribute('aria-label')).toBe('任务操作');
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(menu.hidden).toBe(true);
+    trigger.click();
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    expect(menu.hidden).toBe(false);
+
+    const edit = menu.querySelector('[data-action="open"]') as HTMLButtonElement;
     expect(edit.getAttribute('aria-label')).toBe('编辑任务');
-    expect(edit.dataset.icon).toBe('ellipsis');
     edit.click();
     expect(actions.open).toHaveBeenCalledWith('task-P1');
+    expect(menu.hidden).toBe(true);
+
+    trigger.click();
+    menu.querySelector<HTMLButtonElement>('[data-action="pause"]')!.click();
+    expect(actions.pause).toHaveBeenCalledWith('task-P1');
+    expect(menu.hidden).toBe(true);
+  });
+
+  it.each([
+    ['todo', '待办'],
+    ['in-progress', '进行中'],
+    ['paused', '暂停'],
+    ['done', '已完成'],
+  ] as const)('emits stable styling hooks for %s tasks', (status, label) => {
+    const container = document.createElement('div');
+    const indexed = parseTaskFile('任务/项目.md', source).tasks[0];
+    indexed.task.status = status;
+    const actions = { open: vi.fn(), start: vi.fn(), complete: vi.fn(), pause: vi.fn(), resume: vi.fn() };
+
+    const card = renderTaskCard(container, indexed, { done: 0, total: 0 }, 'none', actions);
+
+    expect(card.dataset.status).toBe(status);
+    expect(card.querySelector(`.tmc-status-${status}`)?.textContent).toBe(label);
   });
 });
