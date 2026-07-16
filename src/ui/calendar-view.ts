@@ -1,11 +1,12 @@
 import { setIcon } from 'obsidian';
-import type { TaskNode } from '../domain/task';
+import type { TaskNode, TaskStatus } from '../domain/task';
 
 export interface CalendarEntry {
   taskId: string;
   title: string;
   kind: 'card' | 'due-marker';
   deadline: boolean;
+  status: TaskStatus;
 }
 
 export interface CalendarDayCell {
@@ -40,11 +41,24 @@ export function buildMonthModel(
           title: task.title,
           kind: 'card',
           deadline: task.dueDate === value,
+          status: task.status,
         });
       } else if (!task.plannedDate && task.dueDate === value) {
-        entries.push({ taskId: task.id, title: task.title, kind: 'card', deadline: true });
+        entries.push({
+          taskId: task.id,
+          title: task.title,
+          kind: 'card',
+          deadline: true,
+          status: task.status,
+        });
       } else if (task.dueDate === value) {
-        entries.push({ taskId: task.id, title: task.title, kind: 'due-marker', deadline: true });
+        entries.push({
+          taskId: task.id,
+          title: task.title,
+          kind: 'due-marker',
+          deadline: true,
+          status: task.status,
+        });
       }
     }
     return {
@@ -72,12 +86,14 @@ const CALENDAR_DRAG_TYPE = 'text/task-matrix-calendar';
 function createTaskButton(
   taskId: string,
   label: string,
+  status: TaskStatus,
   onEdit: (taskId: string) => void,
 ): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = label;
   button.dataset.calendarTaskId = taskId;
+  button.dataset.status = status;
   button.draggable = true;
   button.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -135,6 +151,7 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
       const item = createTaskButton(
         entry.taskId,
         `${entry.deadline ? '截止 · ' : ''}${entry.title}`,
+        entry.status,
         options.onEdit,
       );
       item.className = `tmc-calendar-entry tmc-calendar-${entry.kind}`;
@@ -168,7 +185,7 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
   const selectedEntries = selectedModel.find((day) => day.date === options.selectedDate)?.entries ?? [];
   for (const entry of selectedEntries) {
     const task = taskById.get(entry.taskId);
-    if (task) selectedDay.append(createTaskButton(task.id, task.title, options.onEdit));
+    if (task) selectedDay.append(createTaskButton(task.id, task.title, task.status, options.onEdit));
   }
   panels.append(selectedDay);
 
@@ -178,7 +195,7 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
   unscheduledTitle.textContent = '无日期';
   unscheduled.append(unscheduledTitle);
   for (const task of options.tasks.filter((item) => !item.plannedDate && !item.dueDate)) {
-    unscheduled.append(createTaskButton(task.id, task.title, options.onEdit));
+    unscheduled.append(createTaskButton(task.id, task.title, task.status, options.onEdit));
   }
   panels.append(unscheduled);
   host.append(panels);

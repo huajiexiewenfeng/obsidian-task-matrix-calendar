@@ -6,8 +6,8 @@ import { buildMonthModel, renderCalendarPanel } from '../../src/ui/calendar-view
 describe('buildMonthModel', () => {
   it('builds 42 cells with planned cards and deduplicated due markers', () => {
     const tasks = [
-      makeTask({ id: 'task-A1', title: '计划', plannedDate: '2026-07-10' }),
-      makeTask({ id: 'task-A2', title: '截止', dueDate: '2026-07-11' }),
+      makeTask({ id: 'task-A1', title: '计划', plannedDate: '2026-07-10', status: 'in-progress' }),
+      makeTask({ id: 'task-A2', title: '截止', dueDate: '2026-07-11', status: 'paused' }),
       makeTask({ id: 'task-A3', title: '同日', plannedDate: '2026-07-12', dueDate: '2026-07-12' }),
       makeTask({ id: 'task-A4', title: '跨日', plannedDate: '2026-07-13', dueDate: '2026-07-15' }),
       makeTask({ id: 'task-A5', title: '无日期' }),
@@ -16,8 +16,12 @@ describe('buildMonthModel', () => {
     const model = buildMonthModel(2026, 6, tasks, '2026-07-15');
 
     expect(model).toHaveLength(42);
-    expect(model.find((cell) => cell.date === '2026-07-10')?.entries).toMatchObject([{ taskId: 'task-A1', kind: 'card' }]);
-    expect(model.find((cell) => cell.date === '2026-07-11')?.entries).toMatchObject([{ taskId: 'task-A2', kind: 'card', deadline: true }]);
+    expect(model.find((cell) => cell.date === '2026-07-10')?.entries).toMatchObject([
+      { taskId: 'task-A1', kind: 'card', status: 'in-progress' },
+    ]);
+    expect(model.find((cell) => cell.date === '2026-07-11')?.entries).toMatchObject([
+      { taskId: 'task-A2', kind: 'card', deadline: true, status: 'paused' },
+    ]);
     expect(model.find((cell) => cell.date === '2026-07-12')?.entries).toHaveLength(1);
     expect(model.find((cell) => cell.date === '2026-07-12')?.entries[0]).toMatchObject({ deadline: true });
     expect(model.find((cell) => cell.date === '2026-07-15')?.entries).toMatchObject([{ taskId: 'task-A4', kind: 'due-marker' }]);
@@ -27,10 +31,10 @@ describe('buildMonthModel', () => {
 
 describe('renderCalendarPanel', () => {
   const tasks = [
-    makeTask({ id: 'task-A1', title: '选中日计划', plannedDate: '2026-07-15' }),
-    makeTask({ id: 'task-A2', title: '选中日截止', dueDate: '2026-07-15' }),
-    makeTask({ id: 'task-A3', title: '跨日截止', plannedDate: '2026-07-14', dueDate: '2026-07-15' }),
-    makeTask({ id: 'task-A4', title: '无日期' }),
+    makeTask({ id: 'task-A1', title: '选中日计划', plannedDate: '2026-07-15', status: 'in-progress' }),
+    makeTask({ id: 'task-A2', title: '选中日截止', dueDate: '2026-07-15', status: 'paused' }),
+    makeTask({ id: 'task-A3', title: '跨日截止', plannedDate: '2026-07-14', dueDate: '2026-07-15', status: 'done' }),
+    makeTask({ id: 'task-A4', title: '无日期', status: 'todo' }),
   ];
 
   function render() {
@@ -68,6 +72,12 @@ describe('renderCalendarPanel', () => {
     expect(host.querySelectorAll('[data-role="unscheduled"] [data-calendar-task-id]'))
       .toHaveLength(1);
     expect(host.querySelector('[data-role="unscheduled"]')?.textContent).toContain('无日期');
+    expect(host.querySelector('[data-date="2026-07-15"] [data-calendar-task-id="task-A1"]')
+      ?.getAttribute('data-status')).toBe('in-progress');
+    expect(host.querySelector('[data-role="selected-day"] [data-calendar-task-id="task-A2"]')
+      ?.getAttribute('data-status')).toBe('paused');
+    expect(host.querySelector('[data-role="unscheduled"] [data-calendar-task-id="task-A4"]')
+      ?.getAttribute('data-status')).toBe('todo');
   });
 
   it('delegates month navigation, date selection, and task editing', () => {
