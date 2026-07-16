@@ -23,14 +23,37 @@ export interface TaskFilterBarOptions {
 }
 
 const STATUS = [
-  ['active', '状态：活动'], ['*', '状态：全部'], ['todo', '状态：待办'],
-  ['in-progress', '状态：进行中'], ['paused', '状态：暂停'], ['done', '状态：已完成'],
+  ['active', '活动'], ['*', '全部'], ['todo', '待办'],
+  ['in-progress', '进行中'], ['paused', '暂停'], ['done', '已完成'],
 ] as const;
 
 const RISK = [
-  ['*', '截止：全部'], ['overdue', '截止：已逾期'], ['due-today', '截止：今天'],
-  ['upcoming', '截止：即将到期'], ['none', '截止：无风险'],
+  ['*', '全部'], ['overdue', '已逾期'], ['due-today', '今天'],
+  ['upcoming', '即将到期'], ['none', '无风险'],
 ] as const;
+
+function choiceLabel(
+  choices: ReadonlyArray<readonly [string, string]>,
+  value: string,
+): string {
+  return choices.find(([choice]) => choice === value)?.[1] ?? value;
+}
+
+function activeFilterLabels(state: TaskWorkspaceFilterState): string[] {
+  const labels: string[] = [];
+  if (state.query.trim()) labels.push(`搜索：${state.query.trim()}`);
+  if (state.project !== DEFAULT_FILTER_STATE.project) labels.push(`项目：${state.project}`);
+  if (state.status !== DEFAULT_FILTER_STATE.status) {
+    labels.push(`状态：${choiceLabel(STATUS, state.status)}`);
+  }
+  if (state.risk !== DEFAULT_FILTER_STATE.risk) {
+    labels.push(`截止：${choiceLabel(RISK, state.risk)}`);
+  }
+  if (state.sourcePath !== DEFAULT_FILTER_STATE.sourcePath) {
+    labels.push(`来源：${state.sourcePath}`);
+  }
+  return labels;
+}
 
 function filterChip(
   name: FilterName,
@@ -44,10 +67,13 @@ function filterChip(
   chip.className = 'tmc-filter-chip';
   chip.classList.toggle('is-active', value !== defaultValue);
 
-  const text = document.createElement('span');
-  text.className = 'visually-hidden';
-  text.dataset.filterLabel = '';
-  text.textContent = caption;
+  const accessibilityLabel = document.createElement('span');
+  accessibilityLabel.className = 'visually-hidden';
+  accessibilityLabel.dataset.filterLabel = '';
+  accessibilityLabel.textContent = caption;
+  const visibleCaption = document.createElement('span');
+  visibleCaption.dataset.filterCaption = '';
+  visibleCaption.textContent = name === 'risk' ? '截止' : caption;
 
   const select = document.createElement('select');
   select.dataset.filter = name;
@@ -59,7 +85,7 @@ function filterChip(
     select.append(option);
   }
   select.addEventListener('change', () => onChange(name, select.value));
-  chip.append(text, select);
+  chip.append(accessibilityLabel, visibleCaption, select);
   return chip;
 }
 
@@ -99,8 +125,8 @@ export function renderTaskFilterBar(options: TaskFilterBarOptions): HTMLElement 
       options.state.project,
       DEFAULT_FILTER_STATE.project,
       [
-        ['*', '项目：全部'],
-        ...options.choices.projects.map((project) => [project, `项目：${project}`] as const),
+        ['*', '全部'],
+        ...options.choices.projects.map((project) => [project, project] as const),
       ],
       options.onFilterChange,
     ),
@@ -126,22 +152,37 @@ export function renderTaskFilterBar(options: TaskFilterBarOptions): HTMLElement 
       options.state.sourcePath,
       DEFAULT_FILTER_STATE.sourcePath,
       [
-        ['*', '来源：全部'],
-        ...options.choices.sourcePaths.map((path) => [path, `来源：${path}`] as const),
+        ['*', '全部'],
+        ...options.choices.sourcePaths.map((path) => [path, path] as const),
       ],
       options.onFilterChange,
     ),
   );
-  bar.append(searchField, chips);
+  const controls = document.createElement('div');
+  controls.className = 'tmc-filter-controls';
+  controls.append(searchField, chips);
+  bar.append(controls);
 
   if (hasActiveFilters(options.state)) {
+    const active = document.createElement('div');
+    active.className = 'tmc-filter-active';
+    const activeCaption = document.createElement('span');
+    activeCaption.textContent = '当前筛选';
+    active.append(activeCaption);
+    for (const label of activeFilterLabels(options.state)) {
+      const chip = document.createElement('span');
+      chip.dataset.activeFilter = '';
+      chip.textContent = label;
+      active.append(chip);
+    }
     const clear = document.createElement('button');
     clear.type = 'button';
     clear.className = 'tmc-clear-filters';
     clear.dataset.action = 'clear-filters';
     clear.textContent = '清除筛选';
     clear.addEventListener('click', options.onClear);
-    bar.append(clear);
+    active.append(clear);
+    bar.append(active);
   }
 
   return bar;

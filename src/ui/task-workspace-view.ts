@@ -109,6 +109,7 @@ export class TaskWorkspaceView extends ItemView {
       renderTaskWorkspaceHeader({
         mode: this.mode,
         importing: this.importing,
+        summary: this.workspaceSummary(),
         onCreate: () => this.form.openCreate(),
         onImport: () => this.startImport(),
         onModeChange: (mode) => this.setMode(mode),
@@ -130,6 +131,22 @@ export class TaskWorkspaceView extends ItemView {
     if (this.mode === 'tasks') this.renderTaskMatrix(content);
     else this.renderCalendar(content);
     this.containerEl.append(content);
+  }
+
+  private workspaceSummary(): { active: number; dueRisk: number; unclassified: number } {
+    const active = this.index.snapshot().tasks.filter(
+      (item) => !item.task.parentId && item.task.status !== 'done',
+    );
+    return {
+      active: active.length,
+      dueRisk: active.filter((item) => classifyDateRisk(
+        item.task.dueDate,
+        item.task.status,
+        this.today(),
+        this.dueSoonDays,
+      ) !== 'none').length,
+      unclassified: active.filter((item) => item.task.quadrant === 'unclassified').length,
+    };
   }
 
   private startImport(): void {

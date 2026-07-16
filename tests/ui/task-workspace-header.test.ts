@@ -10,12 +10,19 @@ describe('renderTaskWorkspaceHeader', () => {
     const header = renderTaskWorkspaceHeader({
       mode: 'tasks',
       importing: false,
+      summary: { active: 14, dueRisk: 3, unclassified: 2 },
       onCreate,
       onImport,
       onModeChange,
     });
 
-    expect(header.querySelector('h2')?.textContent).toBe('今天要推进什么？');
+    expect(header.querySelector('h2')?.textContent).toBe('任务中心');
+    expect(header.querySelector('[data-role="workspace-summary"]')?.textContent)
+      .toBe('14 个活动任务 · 3 个临近截止 · 2 个待分类');
+    expect(header.querySelector('[data-role="workspace-primary"] [data-action="new-task"]'))
+      .toBeInstanceOf(HTMLButtonElement);
+    expect(header.querySelector('[data-role="workspace-modes"] [aria-pressed="true"]')?.textContent)
+      .toBe('任务');
     expect(header.querySelector('[data-action="new-task"]')?.classList)
       .toContain('mod-cta');
     expect(header.querySelector('[data-action="import-legacy"]')?.classList)

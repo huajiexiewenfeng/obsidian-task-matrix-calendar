@@ -95,7 +95,9 @@ describe('TaskWorkspaceView', () => {
     await view.onOpen();
 
     expect(view.containerEl.querySelector('.tmc-workspace-header h2')?.textContent)
-      .toBe('今天要推进什么？');
+      .toBe('任务中心');
+    expect(view.containerEl.querySelector('[data-role="workspace-summary"]')?.textContent)
+      .toBe('3 个活动任务 · 3 个临近截止 · 1 个待分类');
     expect(view.containerEl.querySelector('.tmc-filter-bar [data-filter="query"]')).not.toBeNull();
 
     changeFilter(view, 'project', 'Alpha');

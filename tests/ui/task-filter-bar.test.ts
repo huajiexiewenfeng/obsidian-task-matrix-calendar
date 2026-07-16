@@ -8,7 +8,7 @@ describe('renderTaskFilterBar', () => {
     const onFilterChange = vi.fn();
     const onClear = vi.fn();
     const bar = renderTaskFilterBar({
-      state: { ...DEFAULT_FILTER_STATE, project: 'Smarthub' },
+      state: { ...DEFAULT_FILTER_STATE, project: 'Smarthub', risk: 'overdue' },
       choices: { projects: ['Smarthub'], sourcePaths: ['任务/任务收件箱.md'] },
       onSearch: vi.fn(),
       onFilterChange,
@@ -19,6 +19,11 @@ describe('renderTaskFilterBar', () => {
       .toContain('is-active');
     expect(bar.querySelector('[data-action="clear-filters"]')).not.toBeNull();
     expect(bar.querySelector('[data-filter="query"]')?.getAttribute('aria-label')).toBe('搜索任务');
+    expect(bar.querySelector('.tmc-filter-controls')).not.toBeNull();
+    expect(Array.from(bar.querySelectorAll('[data-filter-caption]'), (node) => node.textContent))
+      .toEqual(['项目', '状态', '截止', '来源']);
+    expect(Array.from(bar.querySelectorAll('[data-active-filter]'), (node) => node.textContent))
+      .toEqual(['项目：Smarthub', '截止：已逾期']);
 
     const project = bar.querySelector<HTMLSelectElement>('[data-filter="project"]')!;
     project.value = '*';
