@@ -17,6 +17,16 @@ function argument(name) {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
+function availableBackupPath(root, name) {
+  let candidate = join(root, name);
+  let sequence = 2;
+  while (existsSync(candidate)) {
+    candidate = join(root, `${name}-${sequence}`);
+    sequence += 1;
+  }
+  return candidate;
+}
+
 const vault = resolve(argument('--vault') ?? process.env.OBSIDIAN_VAULT ?? '');
 if (!vault || !existsSync(vault)) fail('请通过 --vault 或 OBSIDIAN_VAULT 指定现有 Vault。');
 const obsidian = join(vault, '.obsidian');
@@ -32,10 +42,21 @@ for (const artifact of artifacts) {
 
 const pluginsRoot = join(obsidian, 'plugins');
 const target = join(pluginsRoot, 'task-matrix-calendar');
+const backupRoot = join(obsidian, 'plugin-backups', 'task-matrix-calendar');
 mkdirSync(pluginsRoot, { recursive: true });
+for (const entry of readdirSync(pluginsRoot)) {
+  const prefix = 'task-matrix-calendar.backup-';
+  if (!entry.startsWith(prefix)) continue;
+  mkdirSync(backupRoot, { recursive: true });
+  const source = join(pluginsRoot, entry);
+  const backup = availableBackupPath(backupRoot, entry.slice(prefix.length));
+  cpSync(source, backup, { recursive: true });
+  rmSync(source, { recursive: true, force: true });
+}
 if (existsSync(target)) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backup = `${target}.backup-${stamp}`;
+  const backup = join(backupRoot, stamp);
+  mkdirSync(backupRoot, { recursive: true });
   cpSync(target, backup, { recursive: true });
   rmSync(target, { recursive: true, force: true });
 }

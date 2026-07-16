@@ -16,9 +16,12 @@ describe('install-to-vault script', () => {
     writeFileSync(join(plugin, 'main.js'), 'old build', 'utf8');
 
     execFileSync(process.execPath, ['scripts/install-to-vault.mjs', '--vault', vault], { cwd: process.cwd() });
-    const backups = readdirSync(join(vault, '.obsidian', 'plugins')).filter((name) => name.startsWith('task-matrix-calendar.backup-'));
+    const pluginEntries = readdirSync(join(vault, '.obsidian', 'plugins'));
+    expect(pluginEntries).toEqual(['task-matrix-calendar']);
+    const backupRoot = join(vault, '.obsidian', 'plugin-backups', 'task-matrix-calendar');
+    const backups = readdirSync(backupRoot);
     expect(backups).toHaveLength(1);
-    expect(readFileSync(join(vault, '.obsidian', 'plugins', backups[0], 'main.js'), 'utf8')).toBe('old build');
+    expect(readFileSync(join(backupRoot, backups[0], 'main.js'), 'utf8')).toBe('old build');
   });
 
   it('refuses the production-named vault without an explicit environment guard', () => {
@@ -30,5 +33,31 @@ describe('install-to-vault script', () => {
     });
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('ALLOW_PRODUCTION_VAULT=YES');
+  });
+
+  it('moves legacy backup folders outside the plugin discovery root', () => {
+    const root = mkdtempSync(join(tmpdir(), 'tmc-install-'));
+    const vault = join(root, 'Development Vault');
+    const pluginsRoot = join(vault, '.obsidian', 'plugins');
+    const legacyBackup = join(pluginsRoot, 'task-matrix-calendar.backup-legacy');
+    mkdirSync(legacyBackup, { recursive: true });
+    writeFileSync(join(legacyBackup, 'main.js'), 'legacy build', 'utf8');
+    writeFileSync(
+      join(legacyBackup, 'manifest.json'),
+      JSON.stringify({ id: 'task-matrix-calendar' }),
+      'utf8',
+    );
+
+    execFileSync(process.execPath, ['scripts/install-to-vault.mjs', '--vault', vault], {
+      cwd: process.cwd(),
+    });
+
+    expect(readdirSync(pluginsRoot)).toEqual(['task-matrix-calendar']);
+    expect(
+      readFileSync(
+        join(vault, '.obsidian', 'plugin-backups', 'task-matrix-calendar', 'legacy', 'main.js'),
+        'utf8',
+      ),
+    ).toBe('legacy build');
   });
 });
