@@ -8,7 +8,10 @@ import {
   type MigrationPlan,
   type MigrationService,
 } from '../services/migration-service';
-import { renderLegacyCandidateEditor } from './legacy-import-candidate-editor';
+import {
+  renderLegacyCandidateEditorPanel,
+  renderLegacyCandidateListItem,
+} from './legacy-import-candidate-editor';
 
 export type LegacyImportWizardServicePort = Pick<
   MigrationService,
@@ -60,6 +63,7 @@ export class LegacyImportWizard extends Modal {
   private active = false;
   private errorMessage?: string;
   private readonly candidateErrors = new Map<string, CandidateError>();
+  private activeCandidateId?: string;
 
   constructor(
     app: App,
@@ -81,6 +85,7 @@ export class LegacyImportWizard extends Modal {
     this.loading = false;
     this.errorMessage = undefined;
     this.candidateErrors.clear();
+    this.activeCandidateId = undefined;
     this.open();
   }
 
@@ -188,6 +193,12 @@ export class LegacyImportWizard extends Modal {
           }
         }
       }
+      const candidates = this.currentCandidates();
+      if (!candidates.some((candidate) => candidate.candidateId === this.activeCandidateId)) {
+        this.activeCandidateId = candidates.find(
+          (candidate) => this.selectedCandidates.has(candidate.candidateId),
+        )?.candidateId ?? candidates[0]?.candidateId;
+      }
       this.candidateErrors.clear();
       this.step = 'review';
     } catch (error) {
@@ -204,10 +215,15 @@ export class LegacyImportWizard extends Modal {
     const description = document.createElement('p');
     description.textContent = '复选框候选默认选中；普通列表需要你手动选中。';
     const review = document.createElement('div');
-    review.className = 'tmc-import-review';
+    review.className = 'tmc-import-review tmc-import-review-workspace';
+    const candidateList = document.createElement('aside');
+    candidateList.className = 'tmc-import-candidate-list';
+    const editorHost = document.createElement('div');
+    editorHost.className = 'tmc-import-editor-host';
+    review.append(candidateList, editorHost);
     this.contentEl.append(heading, description);
 
-    this.renderFailures(review);
+    this.renderFailures(candidateList);
     for (const path of this.selectedFiles) {
       const candidates = this.plan?.files.get(path) ?? [];
       const group = document.createElement('section');
@@ -234,12 +250,18 @@ export class LegacyImportWizard extends Modal {
       for (const candidate of candidates) {
         const corrected = this.corrections.get(candidate.candidateId)
           ?? cloneTask(candidate.proposed);
-        group.append(renderLegacyCandidateEditor({
+        group.append(renderLegacyCandidateListItem({
           candidate,
           corrected,
           selected: this.selectedCandidates.has(candidate.candidateId),
           disabled: this.pending,
+          active: this.activeCandidateId === candidate.candidateId,
           error: this.candidateErrors.get(candidate.candidateId),
+          onActivate: () => {
+            if (this.pending || this.activeCandidateId === candidate.candidateId) return;
+            this.activeCandidateId = candidate.candidateId;
+            this.render();
+          },
           onSelected: (selected) => {
             if (this.pending) return;
             if (selected) this.selectedCandidates.add(candidate.candidateId);
@@ -257,13 +279,37 @@ export class LegacyImportWizard extends Modal {
           },
         }));
       }
-      review.append(group);
+      candidateList.append(group);
     }
     if (this.currentCandidates().length === 0 && this.plan?.failures.size === 0) {
       const empty = document.createElement('p');
       empty.className = 'tmc-import-warning';
       empty.textContent = '所选文件中没有发现旧任务候选。';
-      review.append(empty);
+      candidateList.append(empty);
+    }
+    const activeCandidate = this.currentCandidates().find(
+      (candidate) => candidate.candidateId === this.activeCandidateId,
+    );
+    if (activeCandidate) {
+      const corrected = this.corrections.get(activeCandidate.candidateId)
+        ?? cloneTask(activeCandidate.proposed);
+      editorHost.append(renderLegacyCandidateEditorPanel({
+        candidate: activeCandidate,
+        corrected,
+        selected: this.selectedCandidates.has(activeCandidate.candidateId),
+        disabled: this.pending,
+        error: this.candidateErrors.get(activeCandidate.candidateId),
+        onSelected: (selected) => {
+          if (selected) this.selectedCandidates.add(activeCandidate.candidateId);
+          else this.selectedCandidates.delete(activeCandidate.candidateId);
+          this.render();
+        },
+        onChanged: (task) => {
+          if (this.pending) return;
+          this.corrections.set(activeCandidate.candidateId, cloneTask(task));
+          this.clearCandidateError(activeCandidate.candidateId);
+        },
+      }));
     }
     this.contentEl.append(review);
     this.renderMessage();
@@ -410,6 +456,8 @@ export class LegacyImportWizard extends Modal {
       });
     }
     if (this.candidateErrors.size === 0) return true;
+    this.activeCandidateId = this.candidateErrors.keys().next().value
+      ?? this.activeCandidateId;
     this.errorMessage = '请先修正所选候选中的错误。';
     this.render();
     return false;
@@ -520,11 +568,12 @@ export class LegacyImportWizard extends Modal {
 
   private clearCandidateError(candidateId: string): void {
     this.candidateErrors.delete(candidateId);
-    const row = this.contentEl.querySelector<HTMLElement>(
-      `[data-candidate-id="${candidateId}"]`,
-    );
-    row?.querySelector('[data-candidate-error]')?.remove();
-    row?.querySelector('[aria-invalid]')?.removeAttribute('aria-invalid');
+    this.contentEl.querySelectorAll<HTMLElement>(
+      `[data-candidate-id="${candidateId}"], [data-active-candidate="${candidateId}"]`,
+    ).forEach((host) => {
+      host.querySelector('[data-candidate-error]')?.remove();
+      host.querySelector('[aria-invalid]')?.removeAttribute('aria-invalid');
+    });
   }
 
   private updateReviewContinue(): void {

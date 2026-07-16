@@ -99,7 +99,13 @@ function field<T extends HTMLInputElement | HTMLTextAreaElement | HTMLSelectElem
   id: string,
   name: string,
 ): T {
-  return row(wizard, id).querySelector<T>(`[name="${name}"]`)!;
+  return wizard.contentEl.querySelector<T>(
+    `[data-active-candidate="${id}"] [name="${name}"]`,
+  )!;
+}
+
+function activateCandidate(wizard: LegacyImportWizard, id: string): void {
+  row(wizard, id).click();
 }
 
 function action(wizard: LegacyImportWizard, name: string): HTMLButtonElement {
@@ -192,6 +198,28 @@ describe('LegacyImportWizard', () => {
     expect(candidateSelection(wizard, 'list').checked).toBe(false);
   });
 
+  it('uses a fixed candidate list and one active editor while preserving corrections', async () => {
+    const wizard = new LegacyImportWizard({} as App, service(), '备份/旧任务导入');
+
+    await openReview(wizard);
+
+    expect(wizard.contentEl.querySelector('.tmc-import-review-workspace')).not.toBeNull();
+    expect(wizard.contentEl.querySelector('.tmc-import-candidate-list')).not.toBeNull();
+    expect(wizard.contentEl.querySelectorAll('.tmc-import-editor-panel')).toHaveLength(1);
+    expect(wizard.contentEl.querySelector('[data-active-candidate="checkbox"]')).not.toBeNull();
+    change(field(wizard, 'checkbox', 'title'), '修正后的自动候选');
+
+    activateCandidate(wizard, 'list');
+    expect(wizard.contentEl.querySelectorAll('.tmc-import-editor-panel')).toHaveLength(1);
+    expect(wizard.contentEl.querySelector('[data-active-candidate="list"]')).not.toBeNull();
+    change(field(wizard, 'list', 'title'), '修正后的普通列表');
+
+    activateCandidate(wizard, 'checkbox');
+    expect(field(wizard, 'checkbox', 'title').value).toBe('修正后的自动候选');
+    activateCandidate(wizard, 'list');
+    expect(field(wizard, 'list', 'title').value).toBe('修正后的普通列表');
+  });
+
   it('shows source path, one-based line, exact source, reason, and proposed fields for every row', async () => {
     const wizard = new LegacyImportWizard({} as App, service(), '备份/旧任务导入');
 
@@ -208,7 +236,7 @@ describe('LegacyImportWizard', () => {
     expect(row(wizard, 'list').textContent).toContain('普通列表，仅作为候选');
   });
 
-  it('groups every previewed file with a live selection count and keeps correction forms collapsed', async () => {
+  it('groups every previewed file with a live selection count and activates one editor', async () => {
     const otherCandidate = {
       ...plan.files.get(sourcePath)![1],
       candidateId: 'other-list',
@@ -239,14 +267,17 @@ describe('LegacyImportWizard', () => {
 
     expect(reviewFileGroup(wizard, sourcePath).textContent).toContain(`${sourcePath} · 1 / 2`);
     expect(reviewFileGroup(wizard, otherPath).textContent).toContain(`${otherPath} · 0 / 1`);
-    const editor = row(wizard, 'other-list');
-    expect(editor.textContent).toContain('另一个候选');
-    expect(editor.textContent).toContain('第 6 行');
-    expect(editor.textContent).toContain('- 手动候选');
-    expect(editor.textContent).toContain('普通列表，仅作为候选');
-    const disclosure = editor.querySelector<HTMLDetailsElement>('details')!;
-    expect(disclosure.open).toBe(false);
-    expect(disclosure.contains(field(wizard, 'other-list', 'title'))).toBe(true);
+    const listItem = row(wizard, 'other-list');
+    expect(listItem.textContent).toContain('另一个候选');
+    expect(listItem.textContent).toContain('第 6 行');
+    expect(listItem.textContent).toContain('- 手动候选');
+    expect(listItem.textContent).toContain('普通列表，仅作为候选');
+    expect(listItem.querySelector('details')).toBeNull();
+
+    activateCandidate(wizard, 'other-list');
+    expect(wizard.contentEl.querySelector('[data-active-candidate="other-list"]'))
+      .not.toBeNull();
+    expect(field(wizard, 'other-list', 'title').value).toBe('另一个候选');
 
     candidateSelection(wizard, 'other-list').click();
 
@@ -366,6 +397,21 @@ describe('LegacyImportWizard', () => {
     expect(wizard.contentEl.dataset.step).toBe('review');
     expect(field(wizard, 'checkbox', 'title').getAttribute('aria-invalid')).toBe('true');
     expect(row(wizard, 'checkbox').textContent).toContain('任务标题不能为空。');
+  });
+
+  it('opens the first invalid selected candidate in the shared editor', async () => {
+    const wizard = new LegacyImportWizard({} as App, service(), '备份/旧任务导入');
+    await openReview(wizard);
+    candidateSelection(wizard, 'list').click();
+    activateCandidate(wizard, 'list');
+    change(field(wizard, 'list', 'title'), '   ');
+    activateCandidate(wizard, 'checkbox');
+
+    action(wizard, 'continue').click();
+
+    expect(wizard.contentEl.dataset.step).toBe('review');
+    expect(wizard.contentEl.querySelector('[data-active-candidate="list"]')).not.toBeNull();
+    expect(field(wizard, 'list', 'title').getAttribute('aria-invalid')).toBe('true');
   });
 
   it('summarizes files, candidate kinds, backup copies, and write behavior before applying', async () => {

@@ -10,7 +10,9 @@ export interface LegacyCandidateEditorOptions {
   corrected: TaskNode;
   selected: boolean;
   disabled: boolean;
+  active?: boolean;
   error?: { field: string; message: string };
+  onActivate?(): void;
   onSelected(selected: boolean): void;
   onChanged(task: TaskNode): void;
 }
@@ -71,12 +73,15 @@ function field(
   error?: LegacyCandidateEditorOptions['error'],
 ): HTMLLabelElement {
   const wrapper = document.createElement('label');
+  wrapper.className = 'tmc-form-field';
   const caption = document.createElement('span');
+  caption.className = 'tmc-form-label';
   caption.textContent = label;
   wrapper.append(caption, control);
   if (error?.field === control.name) {
     control.setAttribute('aria-invalid', 'true');
     const message = document.createElement('span');
+    message.className = 'tmc-form-error';
     message.dataset.candidateError = '';
     message.textContent = error.message;
     wrapper.append(message);
@@ -84,37 +89,96 @@ function field(
   return wrapper;
 }
 
-export function renderLegacyCandidateEditor(
+function appendEvidence(host: HTMLElement, candidate: MigrationCandidate): void {
+  const evidence = document.createElement('div');
+  evidence.className = 'tmc-import-evidence';
+  const location = document.createElement('div');
+  location.className = 'tmc-import-location';
+  location.textContent = `${candidate.sourcePath} · 第 ${candidate.startLine + 1} 行`;
+  const original = document.createElement('pre');
+  original.textContent = candidate.originalText;
+  const reason = document.createElement('p');
+  reason.textContent = candidate.recognition.reason;
+  evidence.append(location, original, reason);
+  host.append(evidence);
+}
+
+export function renderLegacyCandidateListItem(
   options: LegacyCandidateEditorOptions,
 ): HTMLElement {
   const row = document.createElement('article');
   row.className = 'tmc-import-candidate';
   row.dataset.candidateId = options.candidate.candidateId;
+  row.dataset.active = String(Boolean(options.active));
+  row.tabIndex = options.disabled ? -1 : 0;
+  row.setAttribute('role', 'button');
+  row.setAttribute('aria-pressed', String(Boolean(options.active)));
 
+  const header = document.createElement('div');
+  header.className = 'tmc-import-candidate-header';
   const selectionLabel = document.createElement('label');
+  selectionLabel.className = 'tmc-import-candidate-selection';
+  selectionLabel.addEventListener('click', (event) => event.stopPropagation());
   const selection = document.createElement('input');
   selection.type = 'checkbox';
   selection.dataset.selectionId = options.candidate.candidateId;
   selection.checked = options.selected;
   selection.disabled = options.disabled;
+  selection.addEventListener('click', (event) => event.stopPropagation());
   selection.addEventListener('change', () => options.onSelected(selection.checked));
   const selectionText = document.createElement('span');
-  selectionText.textContent = '导入这个候选';
+  selectionText.textContent = '导入';
   selectionLabel.append(selection, selectionText);
 
   const visibleTitle = document.createElement('strong');
   visibleTitle.dataset.candidateTitle = '';
   visibleTitle.textContent = options.corrected.title;
+  header.append(selectionLabel, visibleTitle);
+  row.append(header);
+  appendEvidence(row, options.candidate);
+  if (options.error) {
+    const error = document.createElement('p');
+    error.className = 'tmc-import-candidate-error';
+    error.dataset.candidateError = '';
+    error.textContent = options.error.message;
+    row.append(error);
+  }
 
-  const evidence = document.createElement('div');
-  evidence.className = 'tmc-import-evidence';
-  const location = document.createElement('div');
-  location.textContent = `${options.candidate.sourcePath} · 第 ${options.candidate.startLine + 1} 行`;
-  const original = document.createElement('pre');
-  original.textContent = options.candidate.originalText;
-  const reason = document.createElement('p');
-  reason.textContent = options.candidate.recognition.reason;
-  evidence.append(location, original, reason);
+  const activate = (): void => {
+    if (!options.disabled) options.onActivate?.();
+  };
+  row.addEventListener('click', activate);
+  row.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    activate();
+  });
+  return row;
+}
+
+export function renderLegacyCandidateEditorPanel(
+  options: LegacyCandidateEditorOptions,
+): HTMLElement {
+  const panel = document.createElement('section');
+  panel.className = 'tmc-import-editor-panel';
+  panel.dataset.activeCandidate = options.candidate.candidateId;
+
+  const header = document.createElement('header');
+  header.className = 'tmc-import-editor-header';
+  const title = document.createElement('div');
+  const eyebrow = document.createElement('span');
+  eyebrow.className = 'tmc-import-editor-eyebrow';
+  eyebrow.textContent = '修正任务内容';
+  const heading = document.createElement('h3');
+  heading.textContent = options.corrected.title;
+  title.append(eyebrow, heading);
+  const status = document.createElement('span');
+  status.className = 'tmc-import-selection-status';
+  status.dataset.selected = String(options.selected);
+  status.textContent = options.selected ? '已选中导入' : '未选中导入';
+  header.append(title, status);
+  panel.append(header);
+  appendEvidence(panel, options.candidate);
 
   let current = cloneTask(options.corrected);
   const emit = (update: (task: TaskNode) => TaskNode): void => {
@@ -127,22 +191,22 @@ export function renderLegacyCandidateEditor(
   ): void => {
     const changed = () => {
       emit((task) => update(task, control.value));
-      if (control.name === 'title') visibleTitle.textContent = current.title;
+      if (control.name === 'title') heading.textContent = current.title;
     };
     control.addEventListener('input', changed);
     control.addEventListener('change', changed);
   };
 
-  const title = textInput('title', current.title);
-  bind(title, (task, value) => ({ ...task, title: value }));
+  const titleInput = textInput('title', current.title);
+  bind(titleInput, (task, value) => ({ ...task, title: value }));
   const details = document.createElement('textarea');
   details.name = 'details';
   details.dataset.field = 'details';
-  details.rows = 4;
+  details.rows = 6;
   details.value = current.details ?? '';
   bind(details, (task, value) => ({ ...task, details: value || undefined }));
-  const status = selectInput('status', current.status, STATUS_CHOICES);
-  bind(status, (task, value) => ({ ...task, status: value as TaskStatus }));
+  const statusInput = selectInput('status', current.status, STATUS_CHOICES);
+  bind(statusInput, (task, value) => ({ ...task, status: value as TaskStatus }));
   const plannedDate = textInput('plannedDate', current.plannedDate ?? '');
   plannedDate.inputMode = 'numeric';
   plannedDate.placeholder = 'YYYYMMDD 或 YYYY-MM-DD';
@@ -162,11 +226,13 @@ export function renderLegacyCandidateEditor(
   }));
 
   const fields = document.createElement('div');
-  fields.className = 'tmc-import-candidate-fields';
+  fields.className = 'tmc-import-editor-fields tmc-form-grid';
+  const detailsField = field('详情', details, options.error);
+  detailsField.classList.add('tmc-form-field-wide');
   fields.append(
-    field('标题', title, options.error),
-    field('详情', details, options.error),
-    field('状态', status, options.error),
+    field('标题', titleInput, options.error),
+    detailsField,
+    field('状态', statusInput, options.error),
     field('计划日期', plannedDate, options.error),
     field('截止日期', dueDate, options.error),
     field('四象限', quadrant, options.error),
@@ -178,13 +244,6 @@ export function renderLegacyCandidateEditor(
   >('input, textarea, select').forEach((control) => {
     control.disabled = options.disabled;
   });
-
-  const disclosure = document.createElement('details');
-  disclosure.className = 'tmc-import-candidate-correction';
-  const disclosureLabel = document.createElement('summary');
-  disclosureLabel.textContent = '展开完整修正表单';
-  disclosure.append(disclosureLabel, fields);
-
-  row.append(selectionLabel, visibleTitle, evidence, disclosure);
-  return row;
+  panel.append(fields);
+  return panel;
 }
