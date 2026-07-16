@@ -25,6 +25,8 @@ describe('plugin scaffold', () => {
       '.tmc-task-card-main',
       '.tmc-form-grid',
       '.tmc-form-section',
+      '.tmc-form-actions-primary',
+      '.tmc-delete-confirmation-modal',
       '.tmc-import-progress',
       '.tmc-import-evidence',
       '.tmc-import-actions',
@@ -69,6 +71,9 @@ describe('plugin scaffold', () => {
       expect(styles).not.toContain(obsoleteSelector);
     }
     expect(styles).not.toMatch(/\.tmc-task-form(?=[\s,{>:+~])/);
+    expect(styles).toMatch(
+      /\.tmc-task-form-modal \[data-action="delete"\]\s*\{[^}]*margin-right:\s*auto;[^}]*color:\s*var\(--text-error\);/s,
+    );
 
     const foregroundAndBackgroundDeclarations = styles
       .split('\n')
@@ -133,6 +138,7 @@ describe('plugin scaffold', () => {
       '“任务矩阵 / 日历”在同一个任务工作区内切换并共享筛选状态。',
       '搜索与项目、状态、截止风险、来源筛选可以一键清除。',
       '“+ 新任务”和“编辑”使用同一个分组弹窗；详情支持多行。',
+      '编辑模式可在二次确认后把父任务及其子任务整体移入可见 Markdown 回收站；取消不会写入。',
       '开始日期可输入 `YYYYMMDD` 或 `YYYY-MM-DD`，保存为 `计划日期:: YYYY-MM-DD`。',
       '旧任务导入先选择 Markdown 文件，再核对候选，最后确认备份与写入。',
       '复选框候选默认选中；普通列表候选默认不选中。',

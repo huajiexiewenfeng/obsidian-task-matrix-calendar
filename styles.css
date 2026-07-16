@@ -577,6 +577,22 @@
   border-top: 1px solid var(--tmc-border);
 }
 
+.tmc-task-form-modal [data-action="delete"] {
+  margin-right: auto;
+  color: var(--text-error);
+}
+
+.tmc-form-actions-primary {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tmc-delete-confirmation-modal {
+  display: grid;
+  gap: 12px;
+}
+
 .tmc-classification-modal {
   display: grid;
   gap: 8px;
