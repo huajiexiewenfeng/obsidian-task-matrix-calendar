@@ -3,10 +3,12 @@ import { normalizeDateInput } from '../domain/dates';
 import type { IndexedTask, TaskNode, TaskQuadrant, TaskStatus } from '../domain/task';
 import { TaskWriteError } from '../persistence/obsidian-task-repository';
 import type { CreateTaskInput } from '../services/task-service';
+import type { TaskDeletePromptPort } from './task-delete-confirmation-modal';
 
 export interface TaskFormServicePort {
   create(input: CreateTaskInput): Promise<TaskNode>;
   update(id: string, patch: Partial<Omit<TaskNode, 'id' | 'childrenIds'>>): Promise<void>;
+  moveToTrash(id: string, deletedAt: string): Promise<void>;
 }
 
 type FormMode = { kind: 'create' } | { kind: 'edit'; indexed: IndexedTask };
@@ -79,11 +81,14 @@ function section(name: string, title: string, ...children: HTMLElement[]): HTMLE
 
 export class TaskFormModal extends Modal {
   private mode: FormMode = { kind: 'create' };
+  private deleting = false;
 
   constructor(
     app: App,
     private readonly service: TaskFormServicePort,
     private readonly today: () => string,
+    private readonly deletePrompt: TaskDeletePromptPort,
+    private readonly now: () => string,
   ) {
     super(app);
   }
@@ -170,13 +175,55 @@ export class TaskFormModal extends Modal {
     cancel.textContent = '取消';
     cancel.addEventListener('click', () => this.close());
     save.classList.add('mod-cta');
-    actions.append(cancel, save);
+    if (task) {
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.dataset.action = 'delete';
+      remove.textContent = '删除任务';
+      remove.classList.add('mod-warning');
+      remove.addEventListener('click', () => {
+        if (!this.deleting) void this.deleteCurrentTask(remove, cancel, save);
+      });
+      actions.append(remove);
+    }
+    const primaryActions = document.createElement('div');
+    primaryActions.className = 'tmc-form-actions-primary';
+    primaryActions.append(cancel, save);
+    actions.append(primaryActions);
     form.append(actions);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       if (!save.disabled) void this.submit(form, save);
     });
     this.contentEl.append(heading, form);
+  }
+
+  private async deleteCurrentTask(
+    remove: HTMLButtonElement,
+    cancel: HTMLButtonElement,
+    save: HTMLButtonElement,
+  ): Promise<void> {
+    if (this.deleting || this.mode.kind !== 'edit') return;
+    const task = this.mode.indexed.task;
+    this.deleting = true;
+    this.clearErrors();
+    remove.disabled = true;
+    cancel.disabled = true;
+    save.disabled = true;
+    try {
+      const confirmed = await this.deletePrompt.confirm(
+        task.title,
+        () => this.service.moveToTrash(task.id, this.now()),
+      );
+      if (confirmed) this.close();
+    } catch (error) {
+      this.showError(formErrorMessage(error));
+    } finally {
+      this.deleting = false;
+      remove.disabled = false;
+      cancel.disabled = false;
+      save.disabled = false;
+    }
   }
 
   private dateInput(name: 'plannedDate' | 'dueDate', value: string): HTMLInputElement {

@@ -25,7 +25,8 @@ import {
 import { ClassificationModal } from './ui/classification-modal';
 import { LegacyImportWizard } from './ui/legacy-import-wizard';
 import { TaskMatrixCalendarSettingTab } from './ui/settings-tab';
-import { TaskFormModal } from './ui/task-form-modal';
+import { TaskDeleteConfirmationModal } from './ui/task-delete-confirmation-modal';
+import { TaskFormModal, type TaskFormServicePort } from './ui/task-form-modal';
 import {
   TASK_WORKSPACE_VIEW_TYPE,
   TaskWorkspaceView,
@@ -133,7 +134,19 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
     const trashService = new TrashService(repository, index, vault, this.settings);
     const migrationService = new MigrationService(repository, vault, this.settings);
     const coordinator = new ExternalCheckboxCoordinator(repository, index, prompt);
-    const taskFormModal = new TaskFormModal(this.app, taskService, today);
+    const taskDeletePrompt = new TaskDeleteConfirmationModal(this.app);
+    const taskFormService: TaskFormServicePort = {
+      create: (input) => taskService.create(input),
+      update: (id, patch) => taskService.update(id, patch),
+      moveToTrash: (id, deletedAt) => trashService.moveToTrash(id, deletedAt),
+    };
+    const taskFormModal = new TaskFormModal(
+      this.app,
+      taskFormService,
+      today,
+      taskDeletePrompt,
+      () => new Date().toISOString(),
+    );
     const importWizard = new LegacyImportWizard(
       this.app,
       migrationService,
