@@ -169,12 +169,13 @@ describe('TaskWorkspaceView', () => {
     expect(visibleTaskIds(view)).toEqual(['task-B1']);
   });
 
-  it('renders persistent visible labels for every filter control', async () => {
+  it('renders visible select captions with accessible control names', async () => {
     const { view } = setup();
     await view.onOpen();
 
+    expect(view.containerEl.querySelector('[data-filter="query"]')?.getAttribute('aria-label'))
+      .toBe('搜索任务');
     for (const [name, caption] of [
-      ['query', '搜索'],
       ['project', '项目'],
       ['status', '状态'],
       ['risk', '截止风险'],
@@ -183,8 +184,9 @@ describe('TaskWorkspaceView', () => {
       const control = view.containerEl.querySelector<HTMLElement>(`[data-filter="${name}"]`)!;
       const label = control.closest('label');
       expect(label).not.toBeNull();
-      expect(label?.querySelector('[data-filter-label]')?.textContent).toBe(caption);
+      expect(control.getAttribute('aria-label')).toBe(caption);
     }
+    expect(view.containerEl.querySelector('[data-filter-label]')).toBeNull();
   });
 
   it('keeps search focus and caret while filtering across multiple input renders', async () => {

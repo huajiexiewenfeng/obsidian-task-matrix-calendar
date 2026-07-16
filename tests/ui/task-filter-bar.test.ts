@@ -22,6 +22,11 @@ describe('renderTaskFilterBar', () => {
     expect(bar.querySelector('.tmc-filter-controls')).not.toBeNull();
     expect(Array.from(bar.querySelectorAll('[data-filter-caption]'), (node) => node.textContent))
       .toEqual(['项目', '状态', '截止', '来源']);
+    expect(Array.from(
+      bar.querySelectorAll<HTMLSelectElement>('select[data-filter]'),
+      (node) => node.getAttribute('aria-label'),
+    )).toEqual(['项目', '状态', '截止风险', '来源']);
+    expect(bar.querySelector('[data-filter-label]')).toBeNull();
     expect(Array.from(bar.querySelectorAll('[data-active-filter]'), (node) => node.textContent))
       .toEqual(['项目：Smarthub', '截止：已逾期']);
 

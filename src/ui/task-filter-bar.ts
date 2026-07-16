@@ -67,16 +67,13 @@ function filterChip(
   chip.className = 'tmc-filter-chip';
   chip.classList.toggle('is-active', value !== defaultValue);
 
-  const accessibilityLabel = document.createElement('span');
-  accessibilityLabel.className = 'visually-hidden';
-  accessibilityLabel.dataset.filterLabel = '';
-  accessibilityLabel.textContent = caption;
   const visibleCaption = document.createElement('span');
   visibleCaption.dataset.filterCaption = '';
   visibleCaption.textContent = name === 'risk' ? '截止' : caption;
 
   const select = document.createElement('select');
   select.dataset.filter = name;
+  select.setAttribute('aria-label', caption);
   for (const [choice, label] of choices) {
     const option = document.createElement('option');
     option.value = choice;
@@ -85,7 +82,7 @@ function filterChip(
     select.append(option);
   }
   select.addEventListener('change', () => onChange(name, select.value));
-  chip.append(accessibilityLabel, visibleCaption, select);
+  chip.append(visibleCaption, select);
   return chip;
 }
 
@@ -95,10 +92,6 @@ export function renderTaskFilterBar(options: TaskFilterBarOptions): HTMLElement 
 
   const searchField = document.createElement('label');
   searchField.className = 'tmc-search-field';
-  const searchCaption = document.createElement('span');
-  searchCaption.className = 'visually-hidden';
-  searchCaption.dataset.filterLabel = '';
-  searchCaption.textContent = '搜索';
   const search = document.createElement('input');
   search.type = 'search';
   search.dataset.filter = 'query';
@@ -114,7 +107,7 @@ export function renderTaskFilterBar(options: TaskFilterBarOptions): HTMLElement 
       selectionDirection: search.selectionDirection ?? 'none',
     });
   });
-  searchField.append(searchCaption, search);
+  searchField.append(search);
 
   const chips = document.createElement('div');
   chips.className = 'tmc-filter-chips';

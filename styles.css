@@ -1141,7 +1141,6 @@
     flex: 1 1 0;
   }
 
-  .tmc-filter-controls,
   .tmc-calendar-panels {
     grid-template-columns: minmax(0, 1fr);
   }
