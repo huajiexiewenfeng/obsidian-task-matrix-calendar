@@ -106,6 +106,23 @@ describe('plugin scaffold', () => {
     );
   });
 
+  it('keeps quadrants bounded and gives task states distinct visual hooks', () => {
+    const styles = readFileSync('styles.css', 'utf8');
+
+    expect(styles).toMatch(/\.tmc-quadrant-grid\s*\{[^}]*align-items:\s*start;/s);
+    expect(styles).toMatch(
+      /\.tmc-task-section\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*height:\s*clamp\(240px,\s*30vh,\s*380px\);[^}]*overflow:\s*hidden;/s,
+    );
+    expect(styles).toMatch(
+      /\.tmc-task-list\s*\{[^}]*min-height:\s*0;[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;/s,
+    );
+    for (const status of ['todo', 'in-progress', 'paused', 'done']) {
+      expect(styles).toContain(`.tmc-task-card[data-status="${status}"]`);
+      expect(styles).toContain(`.tmc-status-${status}`);
+    }
+    expect(styles).toMatch(/\.tmc-task-actions\s*\{[^}]*position:\s*absolute;/s);
+  });
+
   it('sizes task and import dialogs from the outer Obsidian modal', () => {
     const styles = readFileSync('styles.css', 'utf8');
 
