@@ -123,6 +123,14 @@ describe('plugin scaffold', () => {
     expect(styles).toMatch(/\.tmc-task-actions\s*\{[^}]*position:\s*absolute;/s);
   });
 
+  it('resets the nested calendar minimum height so it does not exceed the workspace', () => {
+    const styles = readFileSync('styles.css', 'utf8');
+
+    expect(styles).toMatch(
+      /\.tmc-calendar-view\s*\{[^}]*min-height:\s*0;/s,
+    );
+  });
+
   it('sizes task and import dialogs from the outer Obsidian modal', () => {
     const styles = readFileSync('styles.css', 'utf8');
 
