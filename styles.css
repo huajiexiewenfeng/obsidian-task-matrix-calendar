@@ -799,9 +799,13 @@
   border-radius: var(--radius-s);
 }
 
-.tmc-import-file input,
-.tmc-import-candidate-selection input {
-  width: auto;
+.tmc-import-file input[type="checkbox"],
+.tmc-import-candidate-selection input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: var(--checkbox-size, 16px);
+  height: var(--checkbox-size, 16px);
+  min-width: var(--checkbox-size, 16px);
+  padding: 0;
   margin-top: 2px;
 }
 

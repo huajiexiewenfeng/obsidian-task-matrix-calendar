@@ -118,6 +118,14 @@ describe('plugin scaffold', () => {
     );
   });
 
+  it('preserves Obsidian checkbox geometry in the import wizard', () => {
+    const styles = readFileSync('styles.css', 'utf8');
+
+    expect(styles).toMatch(
+      /\.tmc-import-file input\[type="checkbox"\],\s*\.tmc-import-candidate-selection input\[type="checkbox"\]\s*\{[^}]*width:\s*var\(--checkbox-size,\s*16px\);[^}]*height:\s*var\(--checkbox-size,\s*16px\);[^}]*min-width:\s*var\(--checkbox-size,\s*16px\);[^}]*padding:\s*0;/s,
+    );
+  });
+
   it('documents the released workspace, task form, and migration behavior', () => {
     const readme = readFileSync('README.md', 'utf8');
 
