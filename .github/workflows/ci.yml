@@ -14,7 +14,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Build release artifacts
+        run: npm run build
       - run: npm test
       - run: npm run coverage
       - run: npm run lint
-      - run: npm run build
