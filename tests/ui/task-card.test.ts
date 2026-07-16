@@ -31,7 +31,15 @@ describe('renderTaskCard', () => {
     const description = card.querySelector('.tmc-task-description');
     expect(description?.textContent).toBe('第一行详情\n第二行详情');
     expect(description?.tagName).toBe('P');
-    (card.querySelector('[data-action="open"]') as HTMLButtonElement).click();
+    expect(card.querySelector('.tmc-task-card-main .tmc-task-title')).not.toBeNull();
+    expect(card.querySelector('.tmc-task-card-meta')).not.toBeNull();
+    const progressBar = card.querySelector('.tmc-task-progress-bar');
+    expect(progressBar?.getAttribute('aria-valuenow')).toBe('2');
+    expect(progressBar?.getAttribute('aria-valuemax')).toBe('4');
+    const edit = card.querySelector('[data-action="open"]') as HTMLButtonElement;
+    expect(edit.getAttribute('aria-label')).toBe('编辑任务');
+    expect(edit.dataset.icon).toBe('ellipsis');
+    edit.click();
     expect(actions.open).toHaveBeenCalledWith('task-P1');
   });
 });

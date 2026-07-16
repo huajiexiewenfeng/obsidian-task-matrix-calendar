@@ -1,3 +1,4 @@
+import { setIcon } from 'obsidian';
 import type { DateRisk, IndexedTask, TaskQuadrant, TaskStatus } from '../domain/task';
 
 export interface TaskCardActions {
@@ -74,17 +75,42 @@ export function renderTaskCard(
     if (event.key === 'Enter' || event.key === ' ') actions.open(task.id);
   });
 
-  card.append(textElement('h4', 'tmc-task-title', task.title));
+  const cardTop = document.createElement('div');
+  cardTop.className = 'tmc-task-card-top';
+  const main = document.createElement('div');
+  main.className = 'tmc-task-card-main';
+  main.append(textElement('h4', 'tmc-task-title', task.title));
   if (task.details) {
-    card.append(textElement('p', 'tmc-task-description', task.details));
+    main.append(textElement('p', 'tmc-task-description', task.details));
   }
+  const edit = actionButton('', 'open', () => actions.open(task.id), actionsDisabled);
+  edit.setAttribute('aria-label', '编辑任务');
+  setIcon(edit, 'ellipsis');
+  cardTop.append(main, edit);
+  card.append(cardTop);
+
+  const metadata = document.createElement('div');
+  metadata.className = 'tmc-task-card-meta';
   const badges = document.createElement('div');
   badges.className = 'tmc-task-badges';
   badges.append(textElement('span', `tmc-status tmc-status-${task.status}`, STATUS_LABELS[task.status]));
   badges.append(textElement('span', 'tmc-quadrant-label', QUADRANT_LABELS[task.quadrant]));
   if (progress.total > 0) badges.append(textElement('span', 'tmc-progress', `${progress.done}/${progress.total}`));
   if (risk !== 'none') badges.append(textElement('span', `tmc-risk tmc-risk-${risk}`, RISK_LABELS[risk]));
-  card.append(badges);
+  metadata.append(badges);
+
+  if (progress.total > 0) {
+    const progressBar = document.createElement('div');
+    progressBar.className = 'tmc-task-progress-bar';
+    progressBar.setAttribute('role', 'progressbar');
+    progressBar.setAttribute('aria-valuemin', '0');
+    progressBar.setAttribute('aria-valuemax', String(progress.total));
+    progressBar.setAttribute('aria-valuenow', String(progress.done));
+    const value = document.createElement('span');
+    value.style.width = `${Math.round((progress.done / progress.total) * 100)}%`;
+    progressBar.append(value);
+    metadata.append(progressBar);
+  }
 
   const details = [
     task.project && `项目：${task.project}`,
@@ -93,11 +119,11 @@ export function renderTaskCard(
     task.dueDate && `截止：${task.dueDate}`,
     `来源：${location.sourcePath}`,
   ].filter((item): item is string => Boolean(item));
-  card.append(textElement('p', 'tmc-task-details', details.join(' · ')));
+  metadata.append(textElement('p', 'tmc-task-details', details.join(' · ')));
+  card.append(metadata);
 
   const controls = document.createElement('div');
   controls.className = 'tmc-task-actions';
-  controls.append(actionButton('编辑', 'open', () => actions.open(task.id), actionsDisabled));
   if (task.status === 'todo') controls.append(actionButton(
     '开始',
     'start',

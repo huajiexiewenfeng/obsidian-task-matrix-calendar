@@ -50,6 +50,10 @@ export function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/^\//, '');
 }
 
+export function setIcon(parent: HTMLElement, iconId: string): void {
+  parent.dataset.icon = iconId;
+}
+
 export class App {}
 
 export class WorkspaceLeaf {

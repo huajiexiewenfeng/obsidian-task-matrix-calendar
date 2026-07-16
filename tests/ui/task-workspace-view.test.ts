@@ -99,6 +99,15 @@ describe('TaskWorkspaceView', () => {
     expect(view.containerEl.querySelector('[data-role="workspace-summary"]')?.textContent)
       .toBe('3 个活动任务 · 3 个临近截止 · 1 个待分类');
     expect(view.containerEl.querySelector('.tmc-filter-bar [data-filter="query"]')).not.toBeNull();
+    expect(view.containerEl.querySelector(
+      '[data-quadrant="important-urgent"] .tmc-task-section-header h3',
+    )?.textContent).toBe('重要且紧急');
+    expect(view.containerEl.querySelector(
+      '[data-quadrant="important-urgent"] [data-role="section-count"]',
+    )?.textContent).toBe('1');
+    expect(view.containerEl.querySelector(
+      '[data-quadrant="unclassified"] .tmc-task-section-guidance',
+    )?.textContent).toBe('执行前必须分类');
 
     changeFilter(view, 'project', 'Alpha');
     view.containerEl.querySelector<HTMLButtonElement>('[data-action="clear-filters"]')!.click();

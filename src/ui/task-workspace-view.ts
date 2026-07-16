@@ -195,7 +195,7 @@ export class TaskWorkspaceView extends ItemView {
   private renderTaskMatrix(host: HTMLElement): void {
     const tasks = this.filteredTasks();
     const unclassified = tasks.filter((item) => item.task.quadrant === 'unclassified');
-    host.append(this.renderSection(`未分类收件箱 · ${unclassified.length}`, 'unclassified', unclassified));
+    host.append(this.renderSection('未分类收件箱', 'unclassified', unclassified));
 
     const grid = document.createElement('div');
     grid.className = 'tmc-quadrant-grid';
@@ -213,9 +213,21 @@ export class TaskWorkspaceView extends ItemView {
     const section = document.createElement('section');
     section.className = `tmc-task-section tmc-quadrant-${quadrant}`;
     section.dataset.quadrant = quadrant;
+    const sectionHeader = document.createElement('header');
+    sectionHeader.className = 'tmc-task-section-header';
     const heading = document.createElement('h3');
     heading.textContent = title;
-    section.append(heading);
+    const count = document.createElement('span');
+    count.dataset.role = 'section-count';
+    count.textContent = String(tasks.length);
+    sectionHeader.append(heading, count);
+    if (quadrant === 'unclassified') {
+      const guidance = document.createElement('span');
+      guidance.className = 'tmc-task-section-guidance';
+      guidance.textContent = '执行前必须分类';
+      sectionHeader.append(guidance);
+    }
+    section.append(sectionHeader);
     section.addEventListener('dragover', (event) => event.preventDefault());
     section.addEventListener('drop', (event) => {
       event.preventDefault();
