@@ -84,7 +84,7 @@ describe('plugin scaffold', () => {
     const styles = readFileSync('styles.css', 'utf8');
 
     expect(styles).toMatch(
-      /\.tmc-import-wizard\s*\{[^}]*width:\s*min\(1240px,\s*calc\(100vw - 48px\)\)/s,
+      /\.tmc-import-wizard\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;/s,
     );
     expect(styles).toMatch(
       /\.tmc-import-review-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(320px,\s*38%\)\s+minmax\(0,\s*62%\)/s,
@@ -98,6 +98,23 @@ describe('plugin scaffold', () => {
     expect(styles).toMatch(/\.tmc-task-workspace\s*\{[^}]*container-type:\s*inline-size;/s);
     expect(styles).toMatch(
       /@container\s*\(max-width:\s*900px\)\s*\{[\s\S]*?\.tmc-filter-controls\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
+    );
+  });
+
+  it('sizes task and import dialogs from the outer Obsidian modal', () => {
+    const styles = readFileSync('styles.css', 'utf8');
+
+    expect(styles).toMatch(
+      /\.modal:has\(\.tmc-task-form-modal\)\s*\{[^}]*width:\s*min\(780px,\s*calc\(100vw - 48px\)\);[^}]*height:\s*min\(820px,\s*calc\(100vh - 48px\)\);/s,
+    );
+    expect(styles).toMatch(
+      /\.modal:has\(\.tmc-import-wizard\)\s*\{[^}]*width:\s*min\(1240px,\s*calc\(100vw - 48px\)\);[^}]*height:\s*min\(820px,\s*calc\(100vh - 48px\)\);/s,
+    );
+    expect(styles).toMatch(
+      /\.tmc-task-form-modal\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*height:\s*100%;[^}]*overflow:\s*hidden;/s,
+    );
+    expect(styles).toMatch(
+      /\.tmc-task-form-modal form\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\)\s+auto;[^}]*overflow:\s*hidden;/s,
     );
   });
 
