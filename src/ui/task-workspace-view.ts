@@ -228,6 +228,10 @@ export class TaskWorkspaceView extends ItemView {
       sectionHeader.append(guidance);
     }
     section.append(sectionHeader);
+    const taskList = document.createElement('div');
+    taskList.className = 'tmc-task-list';
+    taskList.dataset.role = 'task-list';
+    section.append(taskList);
     section.addEventListener('dragover', (event) => event.preventDefault());
     section.addEventListener('drop', (event) => {
       event.preventDefault();
@@ -237,7 +241,7 @@ export class TaskWorkspaceView extends ItemView {
 
     for (const indexed of tasks) {
       const card = renderTaskCard(
-        section,
+        taskList,
         indexed,
         this.progress(indexed),
         classifyDateRisk(indexed.task.dueDate, indexed.task.status, this.today(), this.dueSoonDays),
@@ -252,7 +256,7 @@ export class TaskWorkspaceView extends ItemView {
       const empty = document.createElement('p');
       empty.className = 'tmc-empty';
       empty.textContent = '暂无任务';
-      section.append(empty);
+      taskList.append(empty);
     }
     return section;
   }

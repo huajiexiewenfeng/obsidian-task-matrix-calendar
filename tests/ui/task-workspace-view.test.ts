@@ -117,6 +117,27 @@ describe('TaskWorkspaceView', () => {
     expect(visibleTaskIds(view)).toEqual(['task-A1', 'task-A2', 'task-B1']);
   });
 
+  it('places every section result inside an independent task list', async () => {
+    const { view } = setup();
+    await view.onOpen();
+
+    const sections = view.containerEl.querySelectorAll<HTMLElement>('.tmc-task-section');
+    expect(sections).toHaveLength(5);
+    for (const section of sections) {
+      const list = section.querySelector<HTMLElement>(':scope > [data-role="task-list"]');
+      expect(list).not.toBeNull();
+      expect(list?.querySelectorAll(':scope > .tmc-task-card').length).toBe(
+        Number(section.querySelector('[data-role="section-count"]')?.textContent),
+      );
+    }
+
+    const emptySection = view.containerEl.querySelector<HTMLElement>(
+      '[data-quadrant="not-important-urgent"]',
+    )!;
+    expect(emptySection.querySelector(':scope > .tmc-empty')).toBeNull();
+    expect(emptySection.querySelector('[data-role="task-list"] > .tmc-empty')).not.toBeNull();
+  });
+
   it('uses one workspace for task creation and editing', async () => {
     const { view, leaf, form } = setup();
     const originalContainer = view.containerEl;
