@@ -40,11 +40,11 @@ export function renderTaskWorkspaceHeader(options: TaskWorkspaceHeaderOptions): 
   const actions = document.createElement('div');
   actions.className = 'tmc-workspace-actions';
   actions.dataset.role = 'workspace-primary';
-  const importButton = action('导入旧任务', 'import-legacy', options.onImport);
-  importButton.disabled = options.importing;
   const createButton = action('+ 新任务', 'new-task', options.onCreate);
   createButton.classList.add('mod-cta');
-  actions.append(importButton, createButton);
+  const importButton = action('导入任务', 'import-legacy', options.onImport);
+  importButton.disabled = options.importing;
+  actions.append(createButton, importButton);
 
   const modes = document.createElement('div');
   modes.className = 'tmc-workspace-modes';

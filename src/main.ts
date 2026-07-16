@@ -191,7 +191,7 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
     });
     this.addCommand({
       id: COMMANDS.migrate,
-      name: '导入旧任务',
+      name: '导入任务',
       callback: () => importWizard.openWizard(),
     });
     this.addSettingTab(new TaskMatrixCalendarSettingTab(this.app, this, trashService, async () => scanner.scanAll()));

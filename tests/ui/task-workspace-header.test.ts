@@ -27,6 +27,17 @@ describe('renderTaskWorkspaceHeader', () => {
       .toContain('mod-cta');
     expect(header.querySelector('[data-action="import-legacy"]')?.classList)
       .not.toContain('mod-cta');
+    const actionButtons = Array.from(
+      header.querySelectorAll<HTMLButtonElement>('[data-role="workspace-primary"] button'),
+    );
+    expect(actionButtons.map((button) => button.dataset.action)).toEqual([
+      'new-task',
+      'import-legacy',
+    ]);
+    expect(actionButtons.map((button) => button.textContent)).toEqual([
+      '+ 新任务',
+      '导入任务',
+    ]);
     expect(header.querySelector('[data-mode="tasks"]')?.getAttribute('aria-pressed')).toBe('true');
     expect(header.querySelector('[data-mode="calendar"]')?.getAttribute('aria-pressed')).toBe('false');
 

@@ -117,7 +117,7 @@ describe('plugin lifecycle', () => {
     workspace.containerEl.querySelector<HTMLButtonElement>('[data-action="import-legacy"]')!.click();
     await Promise.resolve();
 
-    expect(migrate.name).toBe('导入旧任务');
+    expect(migrate.name).toBe('导入任务');
     expect(openWizard).toHaveBeenCalledTimes(2);
     expect(openWizard.mock.contexts[0]).toBe(openWizard.mock.contexts[1]);
     expect(openWizard).toHaveBeenNthCalledWith(1);
