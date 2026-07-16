@@ -203,7 +203,10 @@ Create a trigger with the existing Obsidian icon API:
 ```ts
 const menuShell = document.createElement('div');
 menuShell.className = 'tmc-task-menu-shell';
-const trigger = actionButton('', 'menu', () => undefined, actionsDisabled);
+const trigger = document.createElement('button');
+trigger.type = 'button';
+trigger.dataset.action = 'menu';
+trigger.disabled = actionsDisabled;
 trigger.setAttribute('aria-label', '任务操作');
 trigger.setAttribute('aria-haspopup', 'menu');
 trigger.setAttribute('aria-expanded', 'false');
@@ -215,7 +218,7 @@ menu.setAttribute('role', 'menu');
 menu.hidden = true;
 ```
 
-Replace the trigger's generated click behavior with a stop-propagating toggle. Add `编辑`, the valid state transition for the current status, and `完成` when the task is not already done. Every menu action must close the menu before invoking the existing callback. Close on `Escape` and on focus leaving `menuShell`. Card click/Enter/Space must continue to open the existing edit modal.
+Add a stop-propagating click listener to the trigger that toggles the menu and `aria-expanded`. Add `编辑`, the valid state transition for the current status, and `完成` when the task is not already done. Every menu action must close the menu before invoking the existing callback. Close on `Escape` and on focus leaving `menuShell`. Card click/Enter/Space must continue to open the existing edit modal.
 
 - [ ] **Step 5: Run card tests and verify GREEN**
 
