@@ -503,7 +503,7 @@ describe('LegacyImportWizard', () => {
       plannedDate: '2026-07-16',
     });
     expect((Notice as unknown as { messages: string[] }).messages).toContain(
-      '已导入 1 个旧任务。',
+      '已导入 1 个任务。',
     );
     expect(document.body.contains(wizard.contentEl)).toBe(false);
   });
@@ -537,6 +537,9 @@ describe('LegacyImportWizard', () => {
     finalConfirm.click();
 
     expect(migrationService.apply).toHaveBeenCalledTimes(1);
+    expect(
+      wizard.contentEl.querySelector<HTMLElement>('[data-import-status]')?.textContent,
+    ).toBe('正在导入任务…');
     expect(
       Array.from(wizard.contentEl.querySelectorAll<
         HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -640,7 +643,7 @@ describe('LegacyImportWizard', () => {
 
     expect(apply).toHaveBeenCalledTimes(2);
     expect((Notice as unknown as { messages: string[] }).messages).toContain(
-      '已导入 1 个旧任务。',
+      '已导入 1 个任务。',
     );
     expect(document.body.contains(wizard.contentEl)).toBe(false);
   });

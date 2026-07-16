@@ -479,10 +479,10 @@ export class LegacyImportWizard extends Modal {
     this.pending = true;
     this.errorMessage = undefined;
     this.updatePendingControls();
-    this.showStatus('正在导入旧任务…');
+    this.showStatus('正在导入任务…');
     try {
       await this.service.apply(this.plan, selections);
-      new Notice(`已导入 ${selections.size} 个旧任务。`);
+      new Notice(`已导入 ${selections.size} 个任务。`);
       this.close();
     } catch (error) {
       this.errorMessage = migrationErrorMessage(error);
