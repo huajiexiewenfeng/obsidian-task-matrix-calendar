@@ -6,13 +6,15 @@ Task Matrix Calendar（任务矩阵日历）把任务保留在普通 Markdown �
 
 ![Task Matrix Calendar 任务中心](assets/task-center-overview.png)
 
+![Task Matrix Calendar 日历视图](assets/calendar-overview.png)
+
 ## 特点
 
 - Markdown 是唯一任务数据源；插件 `data.json` 只保存设置。
 - 新任务默认“待办 + 未分类”；开始执行或完成前必须选择四象限。
 - 支持待办、进行中、暂停、已完成；“取消执行”回到待办。
 - 支持一层父任务 + 子任务，父任务完成前检查所有子任务。
-- 月历区分计划日期和截止日期，拖动只改变计划日期。
+- 月历区分计划日期和截止日期，任务条目沿用待办、进行中、暂停、已完成的状态配色；拖动只改变计划日期。
 - 原生 Markdown checkbox 变化会安全协调；存在其他同时编辑时拒绝覆盖。
 - 删除进入 Vault 内可见回收站；迁移先预览、先备份、写后验证。
 - 同时适配 Obsidian 亮色与暗色主题，不使用固定黑色正文。
