@@ -4,9 +4,9 @@
 
 Task Matrix Calendar（任务矩阵日历）把任务保留在普通 Markdown 文档中，同时提供更直观的任务中心：未分类收件箱、四象限、父子任务进度、截止风险、月历、可恢复回收站和旧任务迁移。
 
-![Task Matrix Calendar 任务中心](assets/task-center-overview.png)
+![Task Matrix Calendar 任务中心（脱敏演示数据）](assets/task-center-overview-sanitized.png)
 
-![Task Matrix Calendar 日历视图](assets/calendar-overview.png)
+![Task Matrix Calendar 日历视图（脱敏演示数据）](assets/calendar-overview-sanitized.png)
 
 ## 特点
 
