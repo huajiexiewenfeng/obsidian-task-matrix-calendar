@@ -70,6 +70,11 @@ describe('renderCalendarPanel', () => {
 
     expect(host.querySelector('.tmc-calendar-toolbar [data-action="previous-month"]'))
       .not.toBeNull();
+    expect(Array.from(
+      host.querySelectorAll<HTMLElement>('.tmc-calendar-weekdays [role="columnheader"]'),
+      (header) => header.textContent,
+    )).toEqual(['周一', '周二', '周三', '周四', '周五', '周六', '周日']);
+    expect(host.querySelector('.tmc-calendar-month > .tmc-calendar-grid')).not.toBeNull();
     expect(host.querySelector('.tmc-calendar-panels [data-role="selected-day"]'))
       .not.toBeNull();
     expect(host.querySelector('.tmc-calendar-panels [data-role="unscheduled"]'))

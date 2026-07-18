@@ -132,6 +132,19 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
   header.append(previous, title, next);
   host.append(header);
 
+  const month = document.createElement('div');
+  month.className = 'tmc-calendar-month';
+  const weekdays = document.createElement('div');
+  weekdays.className = 'tmc-calendar-weekdays';
+  weekdays.setAttribute('role', 'row');
+  for (const weekday of ['周一', '周二', '周三', '周四', '周五', '周六', '周日']) {
+    const label = document.createElement('span');
+    label.className = 'tmc-calendar-weekday';
+    label.setAttribute('role', 'columnheader');
+    label.textContent = weekday;
+    weekdays.append(label);
+  }
+
   const model = buildMonthModel(
     options.cursor.getUTCFullYear(),
     options.cursor.getUTCMonth(),
@@ -169,7 +182,8 @@ export function renderCalendarPanel(host: HTMLElement, options: CalendarPanelOpt
     });
     grid.append(cell);
   }
-  host.append(grid);
+  month.append(weekdays, grid);
+  host.append(month);
 
   const panels = document.createElement('aside');
   panels.className = 'tmc-calendar-panels';

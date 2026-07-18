@@ -129,6 +129,9 @@ describe('plugin scaffold', () => {
     expect(styles).toMatch(
       /\.tmc-calendar-view\s*\{[^}]*min-height:\s*0;/s,
     );
+    expect(styles).toMatch(
+      /\.tmc-calendar-weekdays\s*\{[^}]*grid-template-columns:\s*repeat\(7,\s*minmax\(0,\s*1fr\)\);/s,
+    );
   });
 
   it('maps calendar entries to the same four task status colors', () => {

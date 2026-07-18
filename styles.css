@@ -726,10 +726,31 @@
   background: var(--tmc-surface);
 }
 
-.tmc-calendar-grid {
+.tmc-calendar-month {
   display: grid;
   grid-column: 1;
   grid-row: 2;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 6px;
+  min-width: 0;
+}
+
+.tmc-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.tmc-calendar-weekday {
+  min-width: 0;
+  color: var(--tmc-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  text-align: center;
+}
+
+.tmc-calendar-grid {
+  display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   min-width: 0;
   overflow: hidden;
@@ -1168,7 +1189,7 @@
     grid-column: 1;
   }
 
-  .tmc-calendar-grid,
+  .tmc-calendar-month,
   .tmc-calendar-panels {
     grid-column: 1;
     grid-row: auto;
@@ -1269,7 +1290,7 @@
     grid-column: 1;
   }
 
-  .tmc-calendar-grid,
+  .tmc-calendar-month,
   .tmc-calendar-panels {
     grid-column: 1;
     grid-row: auto;
