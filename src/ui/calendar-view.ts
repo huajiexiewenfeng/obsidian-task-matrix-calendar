@@ -27,10 +27,11 @@ export function buildMonthModel(
   today: string,
 ): CalendarDayCell[] {
   const first = new Date(Date.UTC(year, month, 1));
+  const firstDayOffset = (first.getUTCDay() + 6) % 7;
   const start = new Date(first);
-  start.setUTCDate(first.getUTCDate() - first.getUTCDay());
+  start.setUTCDate(first.getUTCDate() - firstDayOffset);
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  const requiredCells = Math.ceil((first.getUTCDay() + daysInMonth) / 7) * 7;
+  const requiredCells = Math.ceil((firstDayOffset + daysInMonth) / 7) * 7;
   const visibleCells = Math.max(35, requiredCells);
   return Array.from({ length: visibleCells }, (_, offset) => {
     const date = new Date(start);

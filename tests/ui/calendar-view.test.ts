@@ -16,6 +16,8 @@ describe('buildMonthModel', () => {
     const model = buildMonthModel(2026, 6, tasks, '2026-07-15');
 
     expect(model).toHaveLength(35);
+    expect(model[0]?.date).toBe('2026-06-29');
+    expect(model.at(-1)?.date).toBe('2026-08-02');
     expect(model.find((cell) => cell.date === '2026-07-10')?.entries).toMatchObject([
       { taskId: 'task-A1', kind: 'card', status: 'in-progress' },
     ]);
@@ -32,8 +34,8 @@ describe('buildMonthModel', () => {
     const model = buildMonthModel(2026, 7, [], '2026-08-01');
 
     expect(model).toHaveLength(42);
-    expect(model[0]?.date).toBe('2026-07-26');
-    expect(model.at(-1)?.date).toBe('2026-09-05');
+    expect(model[0]?.date).toBe('2026-07-27');
+    expect(model.at(-1)?.date).toBe('2026-09-06');
   });
 });
 
