@@ -7,3 +7,4 @@ dev-vault/
 data.json
 *.backup-*/
 .superpowers/
+.worktrees/
