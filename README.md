@@ -75,6 +75,15 @@ Task Matrix Calendar（任务矩阵日历）把任务保留在普通 Markdown �
 
 然后在 Obsidian → 设置 → 第三方插件中启用 **Task Matrix Calendar**。
 
+### 更新插件
+
+1. 前往 [最新版本下载页面](https://github.com/huajiexiewenfeng/obsidian-task-matrix-calendar/releases/latest)，重新下载同一版本的 `main.js`、`manifest.json` 和 `styles.css`。
+2. 在 Obsidian 中暂时关闭 **Task Matrix Calendar**。
+3. 用下载的三个文件覆盖 `<Vault>/.obsidian/plugins/task-matrix-calendar/` 中的旧文件。
+4. 重新启用插件；如果界面仍显示旧版本，请重启 Obsidian。
+
+更新只会替换插件程序文件，不会覆盖 Vault 中的 Markdown 任务，也不会删除插件的 `data.json` 设置。
+
 ### 从源码安装到本地 Vault
 
 需要 Node.js 22：
