@@ -1,6 +1,6 @@
 {
   "name": "task-matrix-calendar",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Manage Markdown tasks with an Eisenhower matrix and calendar in Obsidian.",
   "main": "main.js",
   "type": "module",

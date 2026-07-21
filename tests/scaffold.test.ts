@@ -7,7 +7,7 @@ describe('plugin scaffold', () => {
     expect(manifest).toMatchObject({
       id: 'task-matrix-calendar',
       name: 'Task Matrix Calendar',
-      version: '0.1.0',
+      version: '0.1.1',
       minAppVersion: '1.12.7',
       isDesktopOnly: true,
     });

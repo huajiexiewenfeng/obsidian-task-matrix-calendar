@@ -67,7 +67,7 @@ Task Matrix Calendar（任务矩阵日历）把任务保留在普通 Markdown �
 
 ### 从 GitHub Release 手动安装
 
-下载同一版本的 `main.js`、`manifest.json` 和 `styles.css`，放入：
+前往 [最新版本下载页面](https://github.com/huajiexiewenfeng/obsidian-task-matrix-calendar/releases/latest)，下载同一版本的 `main.js`、`manifest.json` 和 `styles.css`，放入：
 
 ```text
 <Vault>/.obsidian/plugins/task-matrix-calendar/
