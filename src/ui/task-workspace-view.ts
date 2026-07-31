@@ -29,6 +29,11 @@ export interface TaskWorkspaceServicePort {
   transition(id: string, target: TaskStatus): Promise<unknown>;
   complete(id: string, quadrant?: Exclude<TaskQuadrant, 'unclassified'>): Promise<void>;
   changeQuadrant(id: string, quadrant: TaskQuadrant): Promise<void>;
+  reorderWithinQuadrant(
+    id: string,
+    targetId?: string,
+    position?: 'before' | 'after',
+  ): Promise<void>;
   changePlannedDate(id: string, plannedDate?: string): Promise<void>;
 }
 
@@ -60,6 +65,7 @@ export class TaskWorkspaceView extends ItemView {
   private calendarCursor: Date;
   private selectedDate: string;
   private importing = false;
+  private draggedTaskId?: string;
   private readonly pendingTaskActions = new Map<string, TaskAction>();
 
   constructor(
@@ -235,8 +241,17 @@ export class TaskWorkspaceView extends ItemView {
     section.addEventListener('dragover', (event) => event.preventDefault());
     section.addEventListener('drop', (event) => {
       event.preventDefault();
-      const taskId = event.dataTransfer?.getData('text/task-matrix-calendar');
-      if (taskId) void this.run(() => this.service.changeQuadrant(taskId, quadrant));
+      const taskId = event.dataTransfer?.getData('text/task-matrix-calendar')
+        || this.draggedTaskId;
+      this.draggedTaskId = undefined;
+      this.clearDropIndicators();
+      if (!taskId) return;
+      const dragged = this.index.get(taskId);
+      if (dragged?.task.quadrant === quadrant) {
+        void this.run(() => this.service.reorderWithinQuadrant(taskId));
+      } else {
+        void this.run(() => this.service.changeQuadrant(taskId, quadrant));
+      }
     });
 
     for (const indexed of tasks) {
@@ -252,7 +267,45 @@ export class TaskWorkspaceView extends ItemView {
         },
       );
       card.addEventListener('dragstart', (event) => {
+        this.draggedTaskId = indexed.task.id;
         event.dataTransfer?.setData('text/task-matrix-calendar', indexed.task.id);
+      });
+      card.addEventListener('dragover', (event) => {
+        const taskId = this.draggedTaskId
+          || event.dataTransfer?.getData('text/task-matrix-calendar');
+        const dragged = taskId ? this.index.get(taskId) : undefined;
+        if (!dragged || dragged.task.quadrant !== quadrant) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.clearDropIndicators();
+        if (taskId === indexed.task.id) return;
+        card.dataset.dropPosition = this.cardDropPosition(card, event);
+      });
+      card.addEventListener('drop', (event) => {
+        const taskId = event.dataTransfer?.getData('text/task-matrix-calendar')
+          || this.draggedTaskId;
+        const dragged = taskId ? this.index.get(taskId) : undefined;
+        if (!taskId || !dragged || dragged.task.quadrant !== quadrant) return;
+        event.preventDefault();
+        event.stopPropagation();
+      const storedPosition = card.dataset.dropPosition;
+      const position: 'before' | 'after' =
+        storedPosition === 'before' || storedPosition === 'after'
+          ? storedPosition
+          : this.cardDropPosition(card, event);
+        this.draggedTaskId = undefined;
+        this.clearDropIndicators();
+        if (taskId !== indexed.task.id) {
+          void this.run(() => this.service.reorderWithinQuadrant(
+            taskId,
+            indexed.task.id,
+            position,
+          ));
+        }
+      });
+      card.addEventListener('dragend', () => {
+        this.draggedTaskId = undefined;
+        this.clearDropIndicators();
       });
     }
     if (tasks.length === 0) {
@@ -262,6 +315,17 @@ export class TaskWorkspaceView extends ItemView {
       taskList.append(empty);
     }
     return section;
+  }
+
+  private cardDropPosition(card: HTMLElement, event: DragEvent): 'before' | 'after' {
+    const bounds = card.getBoundingClientRect();
+    return event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
+  }
+
+  private clearDropIndicators(): void {
+    this.containerEl.querySelectorAll<HTMLElement>('[data-drop-position]').forEach((element) => {
+      delete element.dataset.dropPosition;
+    });
   }
 
   private renderCalendar(host: HTMLElement): void {

@@ -246,6 +246,72 @@ describe('TaskService', () => {
     expect(index.get(child.id)?.task.quadrant).toBe('important-urgent');
   });
 
+  it('persists same-quadrant ordering and survives a repository refresh', async () => {
+    const { service, index, repository, inbox } = setup();
+    const first = await service.create({
+      title: '第一项',
+      quadrant: 'important-urgent',
+    });
+    await service.create({
+      title: '第二项',
+      quadrant: 'important-urgent',
+    });
+    const third = await service.create({
+      title: '第三项',
+      quadrant: 'important-urgent',
+    });
+
+    await service.reorderWithinQuadrant(third.id, first.id, 'before');
+    await repository.refresh(inbox);
+
+    const ordered = index
+      .query({ quadrants: ['important-urgent'] }, '2026-07-15', 3)
+      .map((item) => ({ title: item.task.title, sortOrder: item.task.sortOrder }));
+    expect(ordered).toEqual([
+      { title: '第三项', sortOrder: 1024 },
+      { title: '第一项', sortOrder: 2048 },
+      { title: '第二项', sortOrder: 3072 },
+    ]);
+  });
+
+  it('moves a same-quadrant task to the end and clears ordering after quadrant changes', async () => {
+    const { service, index } = setup();
+    const first = await service.create({
+      title: '第一项',
+      quadrant: 'important-urgent',
+    });
+    const second = await service.create({
+      title: '第二项',
+      quadrant: 'important-urgent',
+    });
+    await service.reorderWithinQuadrant(second.id, first.id, 'before');
+
+    await service.reorderWithinQuadrant(second.id);
+    expect(index.query({ quadrants: ['important-urgent'] }, '2026-07-15', 3)
+      .map((item) => item.task.title)).toEqual(['第一项', '第二项']);
+
+    await service.changeQuadrant(second.id, 'important-not-urgent');
+    expect(index.get(second.id)?.task.sortOrder).toBeUndefined();
+  });
+
+  it('rejects reorder targets outside the dragged task quadrant', async () => {
+    const { service } = setup();
+    const first = await service.create({
+      title: '第一象限',
+      quadrant: 'important-urgent',
+    });
+    const second = await service.create({
+      title: '第二象限',
+      quadrant: 'important-not-urgent',
+    });
+
+    await expect(service.reorderWithinQuadrant(first.id, second.id, 'before'))
+      .rejects.toMatchObject({
+        code: 'invalid-reorder',
+        taskId: first.id,
+      });
+  });
+
   it('moves a whole parent block and refreshes both index paths', async () => {
     const { service, index } = setup();
     const parent = await service.create({ title: '移动', quadrant: 'important-not-urgent' });

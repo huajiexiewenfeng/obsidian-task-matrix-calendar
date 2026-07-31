@@ -403,6 +403,14 @@
   box-shadow: 0 2px 8px var(--tmc-shadow);
 }
 
+.tmc-task-card[data-drop-position="before"] {
+  box-shadow: inset 0 3px 0 var(--interactive-accent);
+}
+
+.tmc-task-card[data-drop-position="after"] {
+  box-shadow: inset 0 -3px 0 var(--interactive-accent);
+}
+
 .tmc-task-card-top {
   display: flex;
   gap: 8px;
