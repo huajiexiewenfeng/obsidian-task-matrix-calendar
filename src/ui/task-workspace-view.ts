@@ -1,4 +1,4 @@
-import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
+import { ItemView, MarkdownRenderer, Notice, type WorkspaceLeaf } from 'obsidian';
 import { classifyDateRisk } from '../domain/dates';
 import type { IndexedTask, TaskQuadrant, TaskStatus } from '../domain/task';
 import type { TaskIndex } from '../index/task-index';
@@ -247,6 +247,9 @@ export class TaskWorkspaceView extends ItemView {
         classifyDateRisk(indexed.task.dueDate, indexed.task.status, this.today(), this.dueSoonDays),
         this.actions(indexed),
         this.pendingTaskActions.has(indexed.task.id),
+        (container, markdown, sourcePath) => {
+          void MarkdownRenderer.render(this.app, markdown, container, sourcePath, this);
+        },
       );
       card.addEventListener('dragstart', (event) => {
         event.dataTransfer?.setData('text/task-matrix-calendar', indexed.task.id);
@@ -298,6 +301,9 @@ export class TaskWorkspaceView extends ItemView {
     const id = indexed.task.id;
     return {
       open: () => this.openTask(id),
+      openLink: (linktext, sourcePath) => {
+        void this.app.workspace.openLinkText(linktext, sourcePath, false);
+      },
       start: () => void this.runTaskAction(id, 'start', async () => {
         if (indexed.task.quadrant === 'unclassified') {
           const quadrant = await this.prompt.chooseQuadrant(id);
