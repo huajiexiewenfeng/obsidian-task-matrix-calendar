@@ -326,6 +326,8 @@ describe('TaskWorkspaceView', () => {
       toJSON: () => ({}),
     });
 
+    target.dispatchEvent(dragEvent('dragover', 'task-0RDER2', 170));
+    expect(target.dataset.dropPosition).toBe('after');
     target.dispatchEvent(dragEvent('dragover', 'task-0RDER2', 110));
     expect(target.dataset.dropPosition).toBe('before');
     target.dispatchEvent(dragEvent('drop', 'task-0RDER2', 110));

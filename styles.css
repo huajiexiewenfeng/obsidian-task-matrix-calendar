@@ -408,12 +408,36 @@
   box-shadow: 0 2px 8px var(--tmc-shadow);
 }
 
-.tmc-task-card[data-drop-position="before"] {
-  box-shadow: inset 0 3px 0 var(--interactive-accent);
+.tmc-task-card[data-drop-position] {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
 }
 
-.tmc-task-card[data-drop-position="after"] {
-  box-shadow: inset 0 -3px 0 var(--interactive-accent);
+.tmc-task-card[data-drop-position]::after {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  height: 50%;
+  color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 18%, var(--tmc-surface));
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  pointer-events: none;
+}
+
+.tmc-task-card[data-drop-position="before"]::after {
+  top: 0;
+  content: "放到此项之前";
+  border-radius: var(--radius-s) var(--radius-s) 0 0;
+}
+
+.tmc-task-card[data-drop-position="after"]::after {
+  bottom: 0;
+  content: "放到此项之后";
+  border-radius: 0 0 var(--radius-s) var(--radius-s);
 }
 
 .tmc-task-card-top {

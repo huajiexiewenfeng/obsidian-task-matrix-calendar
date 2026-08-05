@@ -288,11 +288,11 @@ export class TaskWorkspaceView extends ItemView {
         if (!taskId || !dragged || dragged.task.quadrant !== quadrant) return;
         event.preventDefault();
         event.stopPropagation();
-      const storedPosition = card.dataset.dropPosition;
-      const position: 'before' | 'after' =
-        storedPosition === 'before' || storedPosition === 'after'
-          ? storedPosition
-          : this.cardDropPosition(card, event);
+        const storedPosition = card.dataset.dropPosition;
+        const position: 'before' | 'after' =
+          storedPosition === 'before' || storedPosition === 'after'
+            ? storedPosition
+            : this.cardDropPosition(card, event);
         this.draggedTaskId = undefined;
         this.clearDropIndicators();
         if (taskId !== indexed.task.id) {
