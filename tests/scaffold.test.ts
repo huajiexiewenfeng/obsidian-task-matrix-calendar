@@ -117,7 +117,10 @@ describe('plugin scaffold', () => {
       /\.tmc-task-list\s*\{[^}]*min-height:\s*0;[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;/s,
     );
     expect(styles).toMatch(
-      /\.tmc-task-card\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\)\s+auto;[^}]*height:\s*112px;/s,
+      /\.tmc-task-card\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\)\s+auto;[^}]*height:\s*84px;/s,
+    );
+    expect(styles).toMatch(
+      /\.tmc-task-card:has\(>\s*\.tmc-task-description\)\s*\{[^}]*height:\s*112px;/s,
     );
     expect(styles).toMatch(
       /\.tmc-task-description\s*\{[^}]*grid-row:\s*2;[^}]*min-height:\s*0;[^}]*overflow:\s*hidden;/s,

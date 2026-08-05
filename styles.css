@@ -358,7 +358,7 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 4px;
   min-width: 0;
-  height: 112px;
+  height: 84px;
   padding: 9px 10px;
   margin-top: 6px;
   color: var(--tmc-text);
@@ -367,6 +367,10 @@
   border-left: 4px solid var(--tmc-status-color);
   border-radius: var(--radius-s);
   transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.tmc-task-card:has(> .tmc-task-description) {
+  height: 112px;
 }
 
 .tmc-task-list > .tmc-task-card:first-child {
