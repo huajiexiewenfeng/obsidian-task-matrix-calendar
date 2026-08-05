@@ -116,6 +116,12 @@ describe('plugin scaffold', () => {
     expect(styles).toMatch(
       /\.tmc-task-list\s*\{[^}]*min-height:\s*0;[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;/s,
     );
+    expect(styles).toMatch(
+      /\.tmc-task-card\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\)\s+auto;[^}]*height:\s*112px;/s,
+    );
+    expect(styles).toMatch(
+      /\.tmc-task-description\s*\{[^}]*grid-row:\s*2;[^}]*min-height:\s*0;[^}]*overflow:\s*hidden;/s,
+    );
     for (const status of ['todo', 'in-progress', 'paused', 'done']) {
       expect(styles).toContain(`.tmc-task-card[data-status="${status}"]`);
       expect(styles).toContain(`.tmc-status-${status}`);
