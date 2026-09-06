@@ -1,5 +1,5 @@
 import { classifyDateRisk } from '../domain/dates';
-import type { IndexedTask, TaskFilters } from '../domain/task';
+import { compareTaskOrder, type IndexedTask, type TaskFilters } from '../domain/task';
 import type { ParseIssue, ParseResult, ParsedTask } from '../markdown/task-parser';
 
 export interface IndexSnapshot {
@@ -70,7 +70,7 @@ export class TaskIndex {
         if (!filters.risks.includes(risk)) return false;
       }
       return true;
-    });
+    }).sort(compareTaskOrder);
   }
 
   snapshot(): IndexSnapshot {

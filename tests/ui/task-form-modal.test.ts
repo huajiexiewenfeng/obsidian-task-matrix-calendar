@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { makeTask, type IndexedTask, type TaskNode } from '../../src/domain/task';
 import { TaskWriteError } from '../../src/persistence/obsidian-task-repository';
 import { TaskCommandError } from '../../src/services/task-service';
+import type { TaskAttachmentPickerPort } from '../../src/ui/task-attachment-picker';
 import type { TaskDeletePromptPort } from '../../src/ui/task-delete-confirmation-modal';
 import { TaskFormModal, type TaskFormServicePort } from '../../src/ui/task-form-modal';
 
@@ -50,6 +51,7 @@ function taskFormModal(
   taskService: TaskFormServicePort = service(),
   prompt: TaskDeletePromptPort = deletePrompt(),
   now: () => string = () => '2026-07-16T07:00:00.000Z',
+  attachmentPicker: TaskAttachmentPickerPort = { open: vi.fn() },
 ): TaskFormModal {
   return new TaskFormModal(
     {} as App,
@@ -57,6 +59,7 @@ function taskFormModal(
     () => '2026-07-15',
     prompt,
     now,
+    attachmentPicker,
   );
 }
 
@@ -153,6 +156,35 @@ describe('TaskFormModal', () => {
     expect(input(modal, 'dueDate').value).toBe('2026-07-20');
     expect(input(modal, 'project').value).toBe('产品发布');
     expect(input(modal, 'tags').value).toBe('工作, 本周');
+  });
+
+  it('inserts selected document and image references into details', () => {
+    const open = vi.fn<TaskAttachmentPickerPort['open']>((kind, _sourcePath, onChoose) => {
+      onChoose(kind === 'image' ? '![[附件/截图.png]]' : '[[说明/发布说明]]');
+    });
+    const modal = taskFormModal(service(), deletePrompt(), undefined, { open });
+    modal.openEdit(indexedTask());
+    const details = textarea(modal, 'details');
+    details.setSelectionRange(details.value.length, details.value.length);
+
+    modal.contentEl.querySelector<HTMLButtonElement>('[data-action="attach-document"]')!.click();
+    modal.contentEl.querySelector<HTMLButtonElement>('[data-action="attach-image"]')!.click();
+
+    expect(open).toHaveBeenNthCalledWith(
+      1,
+      'document',
+      '任务/收件箱.md',
+      expect.any(Function),
+    );
+    expect(open).toHaveBeenNthCalledWith(
+      2,
+      'image',
+      '任务/收件箱.md',
+      expect.any(Function),
+    );
+    expect(details.value).toBe(
+      '第一行\n第二行\n[[说明/发布说明]]\n![[附件/截图.png]]',
+    );
   });
 
   it('shows a warning delete action only in edit mode', () => {

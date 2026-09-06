@@ -7,6 +7,7 @@ import {
   type TaskRuleErrorCode,
 } from '../domain/rules';
 import {
+  compareTaskOrder,
   makeTask,
   type IndexedTask,
   type TaskNode,
@@ -21,6 +22,7 @@ export type TaskCommandErrorCode =
   | TaskRuleErrorCode
   | 'task-not-found'
   | 'child-move-not-supported'
+  | 'invalid-reorder'
   | 'parent-not-found';
 
 export class TaskCommandError extends Error {
@@ -47,6 +49,8 @@ export interface CreateTaskInput {
 }
 
 type IdFactory = () => string;
+export type TaskDropPosition = 'before' | 'after';
+const SORT_ORDER_STEP = 1024;
 
 function normalizeTitle(title: string): string {
   return title.trim().replace(/\s+/g, ' ');
@@ -150,6 +154,9 @@ export class TaskService {
       dueDate: patch.dueDate === undefined ? indexed.task.dueDate : patch.dueDate || undefined,
       childrenIds: indexed.task.childrenIds,
     };
+    if (updated.quadrant !== indexed.task.quadrant) {
+      updated.sortOrder = undefined;
+    }
     this.assertDraft(updated, id);
 
     if (updated.status !== indexed.task.status) {
@@ -195,7 +202,12 @@ export class TaskService {
         id,
       );
     }
-    const updated = { ...indexed.task, quadrant, status: 'done' as const };
+    const updated = {
+      ...indexed.task,
+      quadrant,
+      sortOrder: quadrant === indexed.task.quadrant ? indexed.task.sortOrder : undefined,
+      status: 'done' as const,
+    };
     this.assertTransition({ ...indexed.task, quadrant }, 'done');
     this.assertParentGate(updated);
     await this.persist(indexed, updated);
@@ -203,9 +215,61 @@ export class TaskService {
 
   async changeQuadrant(id: string, quadrant: TaskQuadrant): Promise<void> {
     const indexed = this.required(id);
-    const updated = { ...indexed.task, quadrant };
+    const updated = { ...indexed.task, quadrant, sortOrder: undefined };
     this.assertDraft(updated, id);
     await this.persist(indexed, updated);
+  }
+
+  async reorderWithinQuadrant(
+    id: string,
+    targetId?: string,
+    position: TaskDropPosition = 'after',
+  ): Promise<void> {
+    const dragged = this.required(id);
+    if (dragged.task.parentId) {
+      throw new TaskCommandError(
+        'child-move-not-supported',
+        '子任务不能在四象限中独立排序。',
+        id,
+      );
+    }
+    const quadrant = dragged.task.quadrant;
+    const ordered = this.index
+      .snapshot()
+      .tasks
+      .filter((item) => !item.task.parentId && item.task.quadrant === quadrant)
+      .sort(compareTaskOrder);
+    const currentIds = ordered.map((item) => item.task.id);
+    const withoutDragged = currentIds.filter((taskId) => taskId !== id);
+
+    let insertionIndex = withoutDragged.length;
+    if (targetId !== undefined) {
+      if (targetId === id) return;
+      const target = this.required(targetId);
+      if (target.task.parentId || target.task.quadrant !== quadrant) {
+        throw new TaskCommandError(
+          'invalid-reorder',
+          '只能在同一象限内调整任务顺序。',
+          id,
+        );
+      }
+      const targetIndex = withoutDragged.indexOf(targetId);
+      if (targetIndex < 0) {
+        throw new TaskCommandError('invalid-reorder', '找不到排序目标任务。', id);
+      }
+      insertionIndex = targetIndex + (position === 'after' ? 1 : 0);
+    }
+
+    const reorderedIds = [...withoutDragged];
+    reorderedIds.splice(insertionIndex, 0, id);
+    if (reorderedIds.every((taskId, index) => taskId === currentIds[index])) return;
+
+    for (const [index, taskId] of reorderedIds.entries()) {
+      const current = this.required(taskId);
+      const sortOrder = (index + 1) * SORT_ORDER_STEP;
+      if (current.task.sortOrder === sortOrder) continue;
+      await this.persist(current, { ...current.task, sortOrder });
+    }
   }
 
   async changePlannedDate(id: string, plannedDate?: string): Promise<void> {

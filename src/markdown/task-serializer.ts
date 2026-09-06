@@ -30,6 +30,9 @@ function serializeSingleTask(task: TaskNode, indent: number): string[] {
     `${fieldPrefix}- 分类:: ${QUADRANT_LABELS[task.quadrant]}`,
   ];
 
+  if (task.sortOrder !== undefined) {
+    lines.push(`${fieldPrefix}- 排序:: ${task.sortOrder}`);
+  }
   if (task.details !== undefined) {
     lines.push(`${fieldPrefix}- 详情::`);
     const quotePrefix = ' '.repeat(indent + 4);

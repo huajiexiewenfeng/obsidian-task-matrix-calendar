@@ -16,6 +16,7 @@ export interface TaskNode {
   details?: string;
   status: TaskStatus;
   quadrant: TaskQuadrant;
+  sortOrder?: number;
   plannedDate?: string;
   dueDate?: string;
   project?: string;
@@ -39,6 +40,15 @@ export interface IndexedTask {
   location: TaskLocation;
 }
 
+export function compareTaskOrder(left: IndexedTask, right: IndexedTask): number {
+  const leftOrder = left.task.sortOrder;
+  const rightOrder = right.task.sortOrder;
+  if (leftOrder === undefined && rightOrder === undefined) return 0;
+  if (leftOrder === undefined) return 1;
+  if (rightOrder === undefined) return -1;
+  return leftOrder - rightOrder;
+}
+
 export interface TaskFilters {
   query?: string;
   quadrants?: TaskQuadrant[];
@@ -56,6 +66,7 @@ export function makeTask(input: Pick<TaskNode, 'id' | 'title'> & Partial<TaskNod
     details: input.details,
     status: input.status ?? 'todo',
     quadrant: input.quadrant ?? 'unclassified',
+    sortOrder: input.sortOrder,
     tags: input.tags ?? [],
     childrenIds: input.childrenIds ?? [],
     plannedDate: input.plannedDate,

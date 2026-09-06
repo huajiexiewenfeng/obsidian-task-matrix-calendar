@@ -8,6 +8,7 @@ interface BlockOptions {
   details?: string;
   status?: string;
   quadrant?: string;
+  sortOrder?: number;
   project?: string;
   tags?: string;
   dueDate?: string;
@@ -21,6 +22,7 @@ function result(path: string, options: BlockOptions) {
     `  - 状态:: ${options.status ?? '待办'}`,
     `  - 分类:: ${options.quadrant ?? '未分类'}`,
   ];
+  if (options.sortOrder !== undefined) lines.push(`  - 排序:: ${options.sortOrder}`);
   if (options.project) lines.push(`  - 项目:: ${options.project}`);
   if (options.tags) lines.push(`  - 标签:: ${options.tags}`);
   if (options.dueDate) lines.push(`  - 截止日期:: ${options.dueDate}`);
@@ -110,5 +112,29 @@ describe('TaskIndex', () => {
 
     expect(index.query({ query: '第二行' }, '2026-07-15', 3).map((item) => item.task.id))
       .toEqual(['task-DETA11']);
+  });
+
+  it('orders explicit task positions before unsorted tasks while preserving stable ties', () => {
+    const index = new TaskIndex();
+    index.replaceFile('任务/a.md', result('任务/a.md', {
+      id: 'task-A1',
+      title: '未排序',
+    }));
+    index.replaceFile('任务/b.md', result('任务/b.md', {
+      id: 'task-B1',
+      title: '第二',
+      sortOrder: 2048,
+    }));
+    index.replaceFile('任务/c.md', result('任务/c.md', {
+      id: 'task-C1',
+      title: '第一',
+      sortOrder: 1024,
+    }));
+
+    expect(index.query({}, '2026-07-15', 3).map((item) => item.task.title)).toEqual([
+      '第一',
+      '第二',
+      '未排序',
+    ]);
   });
 });

@@ -151,6 +151,7 @@ export function parseTaskFile(path: string, source: string): ParseResult {
 
     let status: TaskStatus | undefined;
     let quadrant: TaskQuadrant | undefined;
+    let sortOrder: number | undefined;
     let details: string | undefined;
     let project: string | undefined;
     let plannedDate: string | undefined;
@@ -215,6 +216,13 @@ export function parseTaskFile(path: string, source: string): ParseResult {
             quadrant = QUADRANT_BY_LABEL[value];
             if (!quadrant) {
               addIssue('unknown-task-content', cursor, `未知分类：${value}`, taskLine.id);
+            }
+            break;
+          case '排序':
+            if (/^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value))) {
+              sortOrder = Number(value);
+            } else {
+              addIssue('unknown-task-content', cursor, `非法排序值：${value}`, taskLine.id);
             }
             break;
           case '详情': {
@@ -305,6 +313,7 @@ export function parseTaskFile(path: string, source: string): ParseResult {
       details,
       status: resolvedStatus,
       quadrant: quadrant ?? 'unclassified',
+      sortOrder,
       project,
       tags,
       plannedDate,

@@ -3,11 +3,18 @@ import type { DateRisk, IndexedTask, TaskStatus } from '../domain/task';
 
 export interface TaskCardActions {
   open(taskId: string): void;
+  openLink(linktext: string, sourcePath: string): void;
   start(taskId: string): void;
   complete(taskId: string): void;
   pause(taskId: string): void;
   resume(taskId: string): void;
 }
+
+export type TaskDetailsRenderer = (
+  container: HTMLElement,
+  markdown: string,
+  sourcePath: string,
+) => void;
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
   todo: '待办',
@@ -55,6 +62,7 @@ export function renderTaskCard(
   risk: DateRisk,
   actions: TaskCardActions,
   actionsDisabled = false,
+  renderDetails?: TaskDetailsRenderer,
 ): HTMLElement {
   const { task } = indexed;
   const card = document.createElement('article');
@@ -141,7 +149,24 @@ export function renderTaskCard(
   cardTop.append(main, badges, menuShell);
   card.append(cardTop);
 
-  if (task.details) card.append(textElement('p', 'tmc-task-description', task.details));
+  if (task.details) {
+    const description = document.createElement(renderDetails ? 'div' : 'p');
+    description.className = 'tmc-task-description';
+    if (renderDetails) renderDetails(description, task.details, indexed.location.sourcePath);
+    else description.textContent = task.details;
+    description.addEventListener('click', (event) => {
+      const target = event.target;
+      const link = target instanceof Element
+        ? target.closest<HTMLAnchorElement>('a.internal-link')
+        : null;
+      event.stopPropagation();
+      if (!link) return;
+      event.preventDefault();
+      const linktext = link.dataset.href ?? link.getAttribute('href');
+      if (linktext) actions.openLink(linktext, indexed.location.sourcePath);
+    });
+    card.append(description);
+  }
 
   const details = [
     task.project && `项目：${task.project}`,

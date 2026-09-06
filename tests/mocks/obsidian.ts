@@ -56,6 +56,16 @@ export function setIcon(parent: HTMLElement, iconId: string): void {
 
 export class App {}
 
+export class MarkdownRenderer {
+  static async render(
+    _app: App,
+    markdown: string,
+    element: HTMLElement,
+  ): Promise<void> {
+    element.textContent = markdown;
+  }
+}
+
 export class WorkspaceLeaf {
   view!: ItemView;
 }
@@ -101,6 +111,22 @@ export class Modal {
   onOpen(): void {}
 
   onClose(): void {}
+}
+
+export class FuzzySuggestModal<T> extends Modal {
+  setPlaceholder(): this {
+    return this;
+  }
+
+  getItems(): T[] {
+    return [];
+  }
+
+  getItemText(): string {
+    return '';
+  }
+
+  onChooseItem(): void {}
 }
 
 export class Notice {

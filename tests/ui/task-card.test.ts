@@ -17,7 +17,14 @@ describe('renderTaskCard', () => {
     const container = document.createElement('div');
     const indexed = parseTaskFile('任务/项目.md', source).tasks[0];
     indexed.task.details = '第一行详情\n第二行详情';
-    const actions = { open: vi.fn(), start: vi.fn(), complete: vi.fn(), pause: vi.fn(), resume: vi.fn() };
+    const actions = {
+      open: vi.fn(),
+      openLink: vi.fn(),
+      start: vi.fn(),
+      complete: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+    };
 
     const card = renderTaskCard(container, indexed, { done: 2, total: 4 }, 'due-today', actions);
 
@@ -65,11 +72,64 @@ describe('renderTaskCard', () => {
     const container = document.createElement('div');
     const indexed = parseTaskFile('任务/项目.md', source).tasks[0];
     indexed.task.status = status;
-    const actions = { open: vi.fn(), start: vi.fn(), complete: vi.fn(), pause: vi.fn(), resume: vi.fn() };
+    const actions = {
+      open: vi.fn(),
+      openLink: vi.fn(),
+      start: vi.fn(),
+      complete: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+    };
 
     const card = renderTaskCard(container, indexed, { done: 0, total: 0 }, 'none', actions);
 
     expect(card.dataset.status).toBe(status);
     expect(card.querySelector(`.tmc-status-${status}`)?.textContent).toBe(label);
+  });
+
+  it('renders details as Markdown and opens internal links without opening the task editor', () => {
+    const container = document.createElement('div');
+    const indexed = parseTaskFile('任务/项目.md', source).tasks[0];
+    indexed.task.details = '说明见 [[发布说明]]\n![[附件/截图.png]]';
+    const actions = {
+      open: vi.fn(),
+      openLink: vi.fn(),
+      start: vi.fn(),
+      complete: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+    };
+    const renderDetails = vi.fn((host: HTMLElement, markdown: string) => {
+      host.dataset.markdown = markdown;
+      const link = document.createElement('a');
+      link.className = 'internal-link';
+      link.dataset.href = '发布说明';
+      link.textContent = '发布说明';
+      host.append(link);
+    });
+
+    const card = renderTaskCard(
+      container,
+      indexed,
+      { done: 0, total: 0 },
+      'none',
+      actions,
+      false,
+      renderDetails,
+    );
+
+    const description = card.querySelector<HTMLElement>('.tmc-task-description')!;
+    expect(description.tagName).toBe('DIV');
+    expect(description.dataset.markdown).toBe('说明见 [[发布说明]]\n![[附件/截图.png]]');
+    expect(renderDetails).toHaveBeenCalledWith(
+      description,
+      indexed.task.details,
+      '任务/项目.md',
+    );
+
+    description.querySelector<HTMLAnchorElement>('a.internal-link')!.click();
+
+    expect(actions.openLink).toHaveBeenCalledWith('发布说明', '任务/项目.md');
+    expect(actions.open).not.toHaveBeenCalled();
   });
 });

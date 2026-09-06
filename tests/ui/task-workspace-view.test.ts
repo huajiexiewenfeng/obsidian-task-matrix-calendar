@@ -46,6 +46,7 @@ function setup(importAction = vi.fn().mockResolvedValue(undefined)) {
     transition: vi.fn().mockResolvedValue(undefined),
     complete: vi.fn().mockResolvedValue(undefined),
     changeQuadrant: vi.fn().mockResolvedValue(undefined),
+    reorderWithinQuadrant: vi.fn().mockResolvedValue(undefined),
     changePlannedDate: vi.fn().mockResolvedValue(undefined),
     update: vi.fn().mockResolvedValue(undefined),
   };
@@ -77,11 +78,12 @@ function changeFilter(view: TaskWorkspaceView, name: string, value: string): voi
   select.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function dragEvent(type: string, taskId: string): DragEvent {
+function dragEvent(type: string, taskId: string, clientY = 0): DragEvent {
   const event = new Event(type, { bubbles: true, cancelable: true }) as DragEvent;
   Object.defineProperty(event, 'dataTransfer', {
     value: { getData: () => taskId, setData: vi.fn() },
   });
+  Object.defineProperty(event, 'clientY', { value: clientY });
   return event;
 }
 
@@ -295,6 +297,61 @@ describe('TaskWorkspaceView', () => {
       .toContain('进行中任务必须保留四象限分类');
     expect(view.containerEl.querySelector('[data-task-id="task-A2"]')?.closest('[data-quadrant]')
       ?.getAttribute('data-quadrant')).toBe('important-urgent');
+  });
+
+  it('reorders cards before a target within the same quadrant', async () => {
+    const { view, index, service } = setup();
+    index.replaceFile('任务/排序.md', parseTaskFile('任务/排序.md', [
+      '- [ ] 第一项 #task ^task-0RDER1',
+      '  - 状态:: 待办',
+      '  - 分类:: 重要且紧急',
+      '  - 排序:: 1024',
+      '',
+      '- [ ] 第二项 #task ^task-0RDER2',
+      '  - 状态:: 待办',
+      '  - 分类:: 重要且紧急',
+      '  - 排序:: 2048',
+    ].join('\n')));
+    await view.onOpen();
+    const target = view.containerEl.querySelector<HTMLElement>('[data-task-id="task-0RDER1"]')!;
+    vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      height: 80,
+      bottom: 180,
+      left: 0,
+      right: 100,
+      width: 100,
+      x: 0,
+      y: 100,
+      toJSON: () => ({}),
+    });
+
+    target.dispatchEvent(dragEvent('dragover', 'task-0RDER2', 170));
+    expect(target.dataset.dropPosition).toBe('after');
+    target.dispatchEvent(dragEvent('dragover', 'task-0RDER2', 110));
+    expect(target.dataset.dropPosition).toBe('before');
+    target.dispatchEvent(dragEvent('drop', 'task-0RDER2', 110));
+    await Promise.resolve();
+
+    expect(service.reorderWithinQuadrant).toHaveBeenCalledWith(
+      'task-0RDER2',
+      'task-0RDER1',
+      'before',
+    );
+    expect(service.changeQuadrant).not.toHaveBeenCalled();
+    expect(target.dataset.dropPosition).toBeUndefined();
+  });
+
+  it('moves a same-quadrant card to the end when dropped on section whitespace', async () => {
+    const { view, service } = setup();
+    await view.onOpen();
+
+    view.containerEl.querySelector<HTMLElement>('[data-quadrant="important-urgent"]')!
+      .dispatchEvent(dragEvent('drop', 'task-A2'));
+    await Promise.resolve();
+
+    expect(service.reorderWithinQuadrant).toHaveBeenCalledWith('task-A2');
+    expect(service.changeQuadrant).not.toHaveBeenCalled();
   });
 
   it('guards a double-click while an unclassified start prompt is pending', async () => {

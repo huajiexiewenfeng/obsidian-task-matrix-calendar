@@ -355,9 +355,10 @@
   --tmc-status-color: var(--text-muted);
   position: relative;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 4px;
   min-width: 0;
-  min-height: 72px;
+  height: 84px;
   padding: 9px 10px;
   margin-top: 6px;
   color: var(--tmc-text);
@@ -366,6 +367,10 @@
   border-left: 4px solid var(--tmc-status-color);
   border-radius: var(--radius-s);
   transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.tmc-task-card:has(> .tmc-task-description) {
+  height: 112px;
 }
 
 .tmc-task-list > .tmc-task-card:first-child {
@@ -403,7 +408,40 @@
   box-shadow: 0 2px 8px var(--tmc-shadow);
 }
 
+.tmc-task-card[data-drop-position] {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.tmc-task-card[data-drop-position]::after {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  height: 50%;
+  color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 18%, var(--tmc-surface));
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  pointer-events: none;
+}
+
+.tmc-task-card[data-drop-position="before"]::after {
+  top: 0;
+  content: "放到此项之前";
+  border-radius: var(--radius-s) var(--radius-s) 0 0;
+}
+
+.tmc-task-card[data-drop-position="after"]::after {
+  bottom: 0;
+  content: "放到此项之后";
+  border-radius: 0 0 var(--radius-s) var(--radius-s);
+}
+
 .tmc-task-card-top {
+  grid-row: 1;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -426,13 +464,32 @@
 }
 
 .tmc-task-description {
+  grid-row: 2;
+  min-height: 0;
   overflow: hidden;
   margin: 0;
   color: var(--tmc-muted);
   font-size: var(--font-ui-small);
   line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.tmc-task-description > :first-child {
+  margin-top: 0;
+}
+
+.tmc-task-description > :last-child {
+  margin-bottom: 0;
+}
+
+.tmc-task-description img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 180px;
+  margin-top: 6px;
+  border-radius: var(--radius-s);
+  object-fit: contain;
 }
 
 .tmc-task-menu-shell {
@@ -492,6 +549,7 @@
 }
 
 .tmc-task-details {
+  grid-row: 3;
   margin: 0;
   overflow: hidden;
   line-height: 1.35;
@@ -655,6 +713,17 @@
 .tmc-import-editor-panel textarea {
   min-height: 8rem;
   resize: vertical;
+}
+
+.tmc-detail-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tmc-detail-toolbar button {
+  min-height: 30px;
+  padding: 4px 9px;
 }
 
 .tmc-task-form-modal [data-role="form-actions"] {

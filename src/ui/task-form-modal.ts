@@ -3,6 +3,10 @@ import { normalizeDateInput } from '../domain/dates';
 import type { IndexedTask, TaskNode, TaskQuadrant, TaskStatus } from '../domain/task';
 import { TaskWriteError } from '../persistence/obsidian-task-repository';
 import type { CreateTaskInput } from '../services/task-service';
+import {
+  type TaskAttachmentKind,
+  type TaskAttachmentPickerPort,
+} from './task-attachment-picker';
 import type { TaskDeletePromptPort } from './task-delete-confirmation-modal';
 
 export interface TaskFormServicePort {
@@ -79,6 +83,19 @@ function section(name: string, title: string, ...children: HTMLElement[]): HTMLE
   return container;
 }
 
+function insertDetailReference(textarea: HTMLTextAreaElement, markdown: string): void {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const before = textarea.value.slice(0, start);
+  const after = textarea.value.slice(end);
+  const leadingBreak = before.length > 0 && !before.endsWith('\n') ? '\n' : '';
+  const trailingBreak = after.length > 0 && !after.startsWith('\n') ? '\n' : '';
+  const replacement = `${leadingBreak}${markdown}${trailingBreak}`;
+  textarea.setRangeText(replacement, start, end, 'end');
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  textarea.focus();
+}
+
 export class TaskFormModal extends Modal {
   private mode: FormMode = { kind: 'create' };
   private deleting = false;
@@ -89,6 +106,7 @@ export class TaskFormModal extends Modal {
     private readonly today: () => string,
     private readonly deletePrompt: TaskDeletePromptPort,
     private readonly now: () => string,
+    private readonly attachmentPicker: TaskAttachmentPickerPort = { open: () => undefined },
   ) {
     super(app);
   }
@@ -135,9 +153,17 @@ export class TaskFormModal extends Modal {
     const content = section('content', '任务内容');
     const contentGrid = document.createElement('div');
     contentGrid.className = 'tmc-form-grid';
+    const detailsField = field('详情', details, true);
+    const detailsToolbar = document.createElement('div');
+    detailsToolbar.className = 'tmc-detail-toolbar';
+    detailsToolbar.append(
+      this.attachmentButton('关联文档', 'attach-document', 'document', details),
+      this.attachmentButton('关联图片', 'attach-image', 'image', details),
+    );
+    detailsField.append(detailsToolbar);
     contentGrid.append(
       field('任务标题', title, true),
-      field('详情', details, true),
+      detailsField,
     );
     content.append(contentGrid);
 
@@ -196,6 +222,27 @@ export class TaskFormModal extends Modal {
       if (!save.disabled) void this.submit(form, save);
     });
     this.contentEl.append(heading, form);
+  }
+
+  private attachmentButton(
+    label: string,
+    action: string,
+    kind: TaskAttachmentKind,
+    details: HTMLTextAreaElement,
+  ): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.action = action;
+    button.textContent = label;
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const sourcePath = this.mode.kind === 'edit' ? this.mode.indexed.location.sourcePath : '';
+      this.attachmentPicker.open(kind, sourcePath, (markdown) => {
+        insertDetailReference(details, markdown);
+      });
+    });
+    return button;
   }
 
   private async deleteCurrentTask(

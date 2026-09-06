@@ -71,4 +71,26 @@ describe('parseTaskFile', () => {
       }
     }
   });
+
+  it('parses positive safe sort orders and rejects invalid values', () => {
+    const source = [
+      '- [ ] 有序任务 #task ^task-0RDER1',
+      '  - 状态:: 待办',
+      '  - 分类:: 重要且紧急',
+      '  - 排序:: 2048',
+      '',
+      '- [ ] 非法排序 #task ^task-0RDER2',
+      '  - 状态:: 待办',
+      '  - 分类:: 重要且紧急',
+      '  - 排序:: 0',
+    ].join('\n');
+
+    const result = parseTaskFile('任务/排序.md', source);
+
+    expect(result.tasks[0].task.sortOrder).toBe(2048);
+    expect(result.tasks[0].readOnly).toBe(false);
+    expect(result.tasks[1].task.sortOrder).toBeUndefined();
+    expect(result.tasks[1].readOnly).toBe(true);
+    expect(result.issues.at(-1)?.message).toBe('非法排序值：0');
+  });
 });

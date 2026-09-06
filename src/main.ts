@@ -25,6 +25,7 @@ import {
 import { ClassificationModal } from './ui/classification-modal';
 import { LegacyImportWizard } from './ui/legacy-import-wizard';
 import { TaskMatrixCalendarSettingTab } from './ui/settings-tab';
+import { ObsidianTaskAttachmentPicker } from './ui/task-attachment-picker';
 import { TaskDeleteConfirmationModal } from './ui/task-delete-confirmation-modal';
 import { TaskFormModal, type TaskFormServicePort } from './ui/task-form-modal';
 import {
@@ -146,6 +147,7 @@ export default class TaskMatrixCalendarPlugin extends Plugin {
       today,
       taskDeletePrompt,
       () => new Date().toISOString(),
+      new ObsidianTaskAttachmentPicker(this.app),
     );
     const importWizard = new LegacyImportWizard(
       this.app,
